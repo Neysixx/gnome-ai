@@ -2,15 +2,23 @@ import { streamText, convertToModelMessages, stepCountIs, dynamicTool, jsonSchem
 import type { JSONSchema7 } from '@ai-sdk/provider';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { composioService, type RawActionData } from './composio.service';
+import { getConfigValue, getLanguageInstruction } from '../lib/config';
 
-const SYSTEM_PROMPT = `Tu es un assistant IA utile et concis. Tu as accès à des outils pour interagir avec des services externes comme Google Calendar, Todoist, Gmail, etc.
+/**
+ * Build the system prompt with language configuration
+ */
+function buildSystemPrompt(): string {
+    const languageInstruction = getLanguageInstruction();
 
-Quand tu utilises un outil:
-- Explique brièvement ce que tu fais
-- Affiche le résultat de manière lisible et bien formatée
-- Si une erreur survient, explique-la clairement
+    return `You are a helpful and concise AI assistant. You have access to tools to interact with external services like Google Calendar, Todoist, Gmail, etc.
 
-Réponds toujours en français sauf si l'utilisateur parle une autre langue.`;
+When using a tool:
+- Briefly explain what you are doing
+- Display the result in a readable and well-formatted way
+- If an error occurs, explain it clearly
+
+${languageInstruction}`;
+}
 
 /**
  * Service for LLM interactions with OpenRouter
@@ -30,11 +38,9 @@ class LLMService {
     }
 
     private getModel(): string {
-        const model = process.env.LLM_MODEL;
-        if (!model) {
-            throw new Error('LLM_MODEL is not set');
-        }
-        return model;
+        // Get model from config (with fallback for backwards compatibility)
+        const configModel = getConfigValue('llm').model;
+        return configModel || 'xiaomi/mimo-v2-flash:free';
     }
 
     /**
@@ -78,12 +84,15 @@ class LLMService {
         // Convert UI messages to model messages
         const modelMessages = await convertToModelMessages(messages as Parameters<typeof convertToModelMessages>[0], { tools });
 
+        // Build system prompt with current config
+        const systemPrompt = buildSystemPrompt();
+
         const result = streamText({
             model: openrouter(model),
             messages: modelMessages,
             tools,
-            stopWhen: stepCountIs(10), // Allow multiple steps so LLM can respond after tool execution
-            system: SYSTEM_PROMPT,
+            stopWhen: stepCountIs(10),
+            system: systemPrompt,
         });
 
         return result;

@@ -16,8 +16,9 @@ import { Send, Bot, User, Loader2, Wrench } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import { ModeToggle } from '@/components/ui/theme-toggle';
+import { SettingsDialog } from '@/components/settings-dialog';
 
-// Helper pour extraire le texte d'un message
+// Helper to extract text from a message
 function getMessageText(message: UIMessage): string {
     return message.parts
         .filter((part): part is Extract<UIMessagePart<never, never>, { type: 'text' }> => part.type === 'text')
@@ -25,12 +26,12 @@ function getMessageText(message: UIMessage): string {
         .join('');
 }
 
-// Helper pour extraire les tool parts d'un message
+// Helper to extract tool parts from a message
 function getToolParts(message: UIMessage) {
     return message.parts.filter(isToolUIPart);
 }
 
-// Helper pour obtenir l'état d'un tool call
+// Helper to get the state of a tool call
 function getToolState(part: ReturnType<typeof getToolParts>[number]): string {
     if ('state' in part) {
         return part.state;
@@ -56,7 +57,7 @@ export default function Client() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const isLoading = status === 'streaming' || status === 'submitted';
 
-    // Auto-scroll vers le bas
+    // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -92,7 +93,8 @@ export default function Client() {
                         </div>
                         <h1 className="font-semibold tracking-tight">Gnome AI</h1>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-1">
+                        <SettingsDialog />
                         <ModeToggle />
                     </div>
                 </div>
@@ -106,9 +108,9 @@ export default function Client() {
                             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                                 <Bot className="h-8 w-8 text-muted-foreground" />
                             </div>
-                            <h2 className="mb-2 text-lg font-medium">Comment puis-je t&apos;aider ?</h2>
+                            <h2 className="mb-2 text-lg font-medium">How can I help you?</h2>
                             <p className="max-w-sm text-sm text-muted-foreground">
-                                Je peux utiliser des outils MCP comme Google Calendar ou Todoist pour t&apos;assister.
+                                I can use tools like Google Calendar or Todoist to assist you.
                             </p>
                         </div>
                     )}
@@ -133,10 +135,10 @@ export default function Client() {
 
                                 <div className="min-w-0 flex-1 space-y-2">
                                     <p className="text-xs font-medium text-muted-foreground">
-                                        {message.role === 'user' ? 'Vous' : 'Assistant'}
+                                        {message.role === 'user' ? 'You' : 'Assistant'}
                                     </p>
 
-                                    {/* Afficher les appels d'outils */}
+                                    {/* Display tool calls */}
                                     {toolParts.map((toolPart) => {
                                         const toolName = getToolName(toolPart);
                                         const state = getToolState(toolPart);
@@ -157,7 +159,7 @@ export default function Client() {
                                         );
                                     })}
 
-                                    {/* Contenu du message */}
+                                    {/* Message content */}
                                     {text && (
                                         <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
                                             <Markdown>{text}</Markdown>
@@ -178,7 +180,7 @@ export default function Client() {
                             </Avatar>
                             <div className="flex items-center gap-2 pt-1">
                                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Réflexion...</span>
+                                <span className="text-sm text-muted-foreground">Thinking...</span>
                             </div>
                         </div>
                     )}
@@ -186,7 +188,7 @@ export default function Client() {
                     {/* Error */}
                     {error && (
                         <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            Erreur : {error.message}
+                            Error: {error.message}
                         </div>
                     )}
                 </div>
@@ -199,7 +201,7 @@ export default function Client() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={onKeyDown}
-                        placeholder="Écris un message..."
+                        placeholder="Type a message..."
                         className="min-h-[52px] resize-none"
                         rows={1}
                         disabled={isLoading}

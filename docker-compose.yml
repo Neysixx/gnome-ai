@@ -14,19 +14,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      # Mount config files (read-write for user overrides)
+      - ./config.default.json:/app/config.default.json:ro
+      - ./config.json:/app/config.json:rw
     environment:
-      # OpenRouter Configuration
+      # Secrets from .env file at monorepo root
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-
-      # Composio Configuration
       - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
-      - COMPOSIO_USER_ID=${COMPOSIO_USER_ID}
 
       # Application Configuration
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=9999
-      
+
   postgres:
     image: postgres:16-alpine
     container_name: gnome-ai-assistant-postgres

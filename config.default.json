@@ -1,0 +1,7 @@
+{
+    "$schema": "./config.schema.json",
+    "llm": {
+        "model": "google/gemini-2.0-flash-exp:free",
+        "language": "auto"
+    }
+}

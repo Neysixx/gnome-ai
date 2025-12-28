@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "llm": {
+            "type": "object",
+            "properties": {
+                "model": {
+                    "type": "string",
+                    "description": "OpenRouter model ID",
+                    "default": "xiaomi/mimo-v2-flash:free"
+                },
+                "language": {
+                    "type": "string",
+                    "enum": [
+                        "auto",
+                        "en",
+                        "fr"
+                    ],
+                    "description": "Response language: auto (detect from user), en (English), fr (French)",
+                    "default": "auto"
+                }
+            },
+            "required": [
+                "model",
+                "language"
+            ]
+        }
+    },
+    "required": [
+        "llm"
+    ]
+}
