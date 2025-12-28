@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "./scripts/build.sh",
+    "build:dev": "./scripts/build.sh --unsafe-reload",
+    "build:install": "./scripts/build.sh --install",
+    "check:types": "tsc -noEmit"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@girs/gjs": "^4.0.0-beta.14",
+    "@girs/gnome-shell": "^46.0.2",
+    "esbuild": "^0.21.5",
+    "esbuild-plugin-tsc": "^0.4.0",
+    "typescript": "^5.5.2"
+  }
+}
