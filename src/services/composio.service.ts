@@ -38,13 +38,23 @@ class ComposioService {
 	}
 
 	/**
-	 * Get all available tools/actions from connected apps
+	 * Get tools only from connected apps for the user
 	 */
 	async getTools(entityId = 'default'): Promise<RawActionData[]> {
-		const toolset = this.getToolSet();
+		// First, get connected apps for this entity
+		const connections = await this.listConnections(entityId);
 
-		// Get tools schema with no filter (all connected apps)
-		const tools = await toolset.getToolsSchema({}, entityId);
+		if (connections.length === 0) {
+			return [];
+		}
+
+		// Extract unique app names from connections
+		const connectedApps = [...new Set(connections.map((conn) => conn.appName))];
+
+		// Get tools only for connected apps
+		const toolset = this.getToolSet();
+		const tools = await toolset.getToolsSchema({ apps: connectedApps }, entityId);
+
 		return tools;
 	}
 

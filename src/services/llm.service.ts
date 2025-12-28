@@ -1,13 +1,13 @@
-import { streamText, convertToModelMessages, type CoreTool } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs, dynamicTool, jsonSchema, type ToolSet } from 'ai';
+import type { JSONSchema7 } from '@ai-sdk/provider';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { composioService, type RawActionData } from './composio.service';
-import { z } from 'zod';
 
 const SYSTEM_PROMPT = `Tu es un assistant IA utile et concis. Tu as accès à des outils pour interagir avec des services externes comme Google Calendar, Todoist, Gmail, etc.
 
 Quand tu utilises un outil:
 - Explique brièvement ce que tu fais
-- Affiche le résultat de manière lisible
+- Affiche le résultat de manière lisible et bien formatée
 - Si une erreur survient, explique-la clairement
 
 Réponds toujours en français sauf si l'utilisateur parle une autre langue.`;
@@ -38,63 +38,27 @@ class LLMService {
     }
 
     /**
-     * Convert Composio tools to AI SDK CoreTool format
+     * Convert Composio tools to AI SDK dynamicTool format
      */
-    private convertToAISDKTools(composioTools: RawActionData[]): Record<string, CoreTool> {
-        const tools: Record<string, CoreTool> = {};
+    private convertToAISDKTools(composioTools: RawActionData[]): ToolSet {
+        const tools: ToolSet = {};
 
-        for (const tool of composioTools) {
-            const inputSchema = tool.parameters as { properties?: Record<string, any>; required?: string[] } | undefined;
-
-            tools[tool.name] = {
-                description: tool.description || `Execute ${tool.name}`,
-                parameters: inputSchema?.properties
-                    ? z.object(
-                        Object.fromEntries(
-                            Object.entries(inputSchema.properties).map(([key, value]: [string, any]) => {
-                                let schema: z.ZodTypeAny;
-
-                                switch (value.type) {
-                                    case 'string':
-                                        schema = z.string();
-                                        break;
-                                    case 'number':
-                                    case 'integer':
-                                        schema = z.number();
-                                        break;
-                                    case 'boolean':
-                                        schema = z.boolean();
-                                        break;
-                                    case 'array':
-                                        schema = z.array(z.any());
-                                        break;
-                                    case 'object':
-                                        schema = z.record(z.any());
-                                        break;
-                                    default:
-                                        schema = z.any();
-                                }
-
-                                // Add description if available
-                                if (value.description) {
-                                    schema = schema.describe(value.description);
-                                }
-
-                                // Make optional if not in required array
-                                if (!inputSchema.required?.includes(key)) {
-                                    schema = schema.optional();
-                                }
-
-                                return [key, schema];
-                            }),
-                        ),
-                    )
-                    : z.object({}),
+        for (const composioTool of composioTools) {
+            tools[composioTool.name] = dynamicTool({
+                description: composioTool.description || `Execute ${composioTool.name}`,
+                inputSchema: jsonSchema(composioTool.parameters as JSONSchema7),
                 execute: async (args) => {
-                    const result = await composioService.executeTool(tool.name, args);
-                    return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+                    const result = await composioService.executeTool(composioTool.name, args as Record<string, unknown>);
+
+                    // Format the result for the LLM
+                    if (!result.successful) {
+                        return `Error: ${result.error || 'Unknown error occurred'}`;
+                    }
+
+                    // Return the data in a readable format
+                    return JSON.stringify(result.data, null, 2);
                 },
-            };
+            });
         }
 
         return tools;
@@ -103,7 +67,7 @@ class LLMService {
     /**
      * Stream a chat response with tool support
      */
-    async streamChat(messages: any[], entityId = 'default') {
+    async streamChat(messages: unknown[], entityId = 'default') {
         const openrouter = this.getOpenRouter();
         const model = this.getModel();
 
@@ -112,13 +76,13 @@ class LLMService {
         const tools = this.convertToAISDKTools(composioTools);
 
         // Convert UI messages to model messages
-        const modelMessages = await convertToModelMessages(messages, { tools });
+        const modelMessages = await convertToModelMessages(messages as Parameters<typeof convertToModelMessages>[0], { tools });
 
         const result = streamText({
             model: openrouter(model),
             messages: modelMessages,
             tools,
-            maxSteps: 10,
+            stopWhen: stepCountIs(10), // Allow multiple steps so LLM can respond after tool execution
             system: SYSTEM_PROMPT,
         });
 
@@ -127,4 +91,3 @@ class LLMService {
 }
 
 export const llmService = new LLMService();
-

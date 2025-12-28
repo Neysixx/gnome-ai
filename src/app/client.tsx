@@ -14,6 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Bot, User, Loader2, Wrench } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
+import Markdown from 'react-markdown';
+import { ModeToggle } from '@/components/ui/theme-toggle';
 
 // Helper pour extraire le texte d'un message
 function getMessageText(message: UIMessage): string {
@@ -83,13 +85,15 @@ export default function Client() {
         <div className="flex h-screen flex-col bg-background">
             {/* Header */}
             <header className="border-b border-border px-6 py-4">
-                <div className="mx-auto flex max-w-3xl items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                        <Bot className="h-5 w-5 text-primary-foreground" />
+                <div className="mx-auto flex max-w-3xl items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+                            <Bot className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <h1 className="font-semibold tracking-tight">Gnome AI</h1>
                     </div>
                     <div>
-                        <h1 className="font-semibold tracking-tight">Gnome AI</h1>
-                        <p className="text-xs text-muted-foreground">Powered by Claude + MCP</p>
+                        <ModeToggle />
                     </div>
                 </div>
             </header>
@@ -155,8 +159,8 @@ export default function Client() {
 
                                     {/* Contenu du message */}
                                     {text && (
-                                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                                            <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
+                                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
+                                            <Markdown>{text}</Markdown>
                                         </div>
                                     )}
                                 </div>
