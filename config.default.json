@@ -1,7 +1,7 @@
 {
     "$schema": "./config.schema.json",
     "llm": {
-        "model": "google/gemini-2.0-flash-exp:free",
+        "model": "xiaomi/mimo-v2-flash:free",
         "language": "auto"
     }
 }

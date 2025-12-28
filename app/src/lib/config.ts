@@ -9,7 +9,7 @@ export interface LLMConfig {
     language: 'auto' | 'en' | 'fr';
 }
 
-export interface AppConfig {
+export interface AppConfig extends Record<string, unknown> {
     llm: LLMConfig;
 }
 
@@ -109,7 +109,7 @@ export function updateConfigSection<K extends keyof AppConfig>(
     value: Partial<AppConfig[K]>,
 ): AppConfig {
     const currentConfig = getConfig();
-    const newSection = deepMerge(currentConfig[key], value);
+    const newSection = deepMerge(currentConfig[key] as Record<string, unknown>, value);
 
     return updateConfig({ [key]: newSection } as Partial<AppConfig>);
 }
