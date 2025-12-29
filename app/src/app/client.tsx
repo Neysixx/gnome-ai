@@ -50,12 +50,31 @@ export default function Client() {
         [],
     );
 
-    const { messages, sendMessage, status, error } = useChat({
+    const { messages, sendMessage, status, error, setMessages } = useChat({
         transport,
     });
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const isLoading = status === 'streaming' || status === 'submitted';
+
+    // Load history on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('gnome-ai-history');
+        if (saved) {
+            try {
+                setMessages(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to load chat history', e);
+            }
+        }
+    }, [setMessages]);
+
+    // Save history on change
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem('gnome-ai-history', JSON.stringify(messages));
+        }
+    }, [messages]);
 
     // Auto-scroll to bottom
     useEffect(() => {
