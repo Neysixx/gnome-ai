@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Bot, User, Loader2, Wrench } from 'lucide-react';
+import { Send, Bot, Loader2, Wrench, Trash } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import { ModeToggle } from '@/components/ui/theme-toggle';
 import { SettingsDialog } from '@/components/settings-dialog';
+import { cn } from '@/lib/utils';
 
 // Helper to extract text from a message
 function getMessageText(message: UIMessage): string {
@@ -54,7 +55,7 @@ export default function Client() {
         transport,
     });
 
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const isLoading = status === 'streaming' || status === 'submitted';
 
     // Load history on mount
@@ -78,10 +79,8 @@ export default function Client() {
 
     // Auto-scroll to bottom
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -101,35 +100,35 @@ export default function Client() {
         }
     };
 
+    const handleClear = () => {
+        setMessages([]);
+        localStorage.removeItem('gnome-ai-history');
+    };
+
     return (
-        <div className="flex h-screen flex-col bg-background">
+        <div className="flex h-screen flex-col bg-background font-sans">
             {/* Header */}
-            <header className="border-b border-border px-6 py-4">
-                <div className="mx-auto flex max-w-3xl items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                            <Bot className="h-5 w-5 text-primary-foreground" />
-                        </div>
-                        <h1 className="font-semibold tracking-tight">Gnome AI</h1>
+            <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Bot className="h-5 w-5" />
                     </div>
-                    <div className="flex items-center gap-1">
-                        <SettingsDialog />
-                        <ModeToggle />
-                    </div>
+                    <h1 className="text-lg font-semibold tracking-tight">Gnome AI</h1>
+                </div>
+                <div className="flex items-center gap-2">
+                    <SettingsDialog />
+                    <ModeToggle />
                 </div>
             </header>
 
             {/* Messages */}
-            <ScrollArea className="flex-1" ref={scrollRef}>
-                <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+            <ScrollArea className="flex-1">
+                <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:px-6">
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-24 text-center">
-                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                                <Bot className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <h2 className="mb-2 text-lg font-medium">How can I help you?</h2>
-                            <p className="max-w-sm text-sm text-muted-foreground">
-                                I can use tools like Google Calendar or Todoist to assist you.
+                        <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+                            <h2 className="mb-3 text-2xl font-semibold tracking-tight">How can I help you today?</h2>
+                            <p className="max-w-md text-muted-foreground">
+                                I'm your AI assistant capable of using tools like Google Calendar or Todoist to help manage your tasks.
                             </p>
                         </div>
                     )}
@@ -137,51 +136,75 @@ export default function Client() {
                     {messages.map((message) => {
                         const text = getMessageText(message);
                         const toolParts = getToolParts(message);
+                        const isUser = message.role === 'user';
 
                         return (
-                            <div key={message.id} className="flex gap-4">
-                                <Avatar className="h-8 w-8 shrink-0">
+                            <div
+                                key={message.id}
+                                className={cn(
+                                    "flex w-full gap-4",
+                                    isUser ? "flex-row-reverse" : "flex-row"
+                                )}
+                            >
+                                <Avatar className={cn(
+                                    "h-8 w-8 shrink-0",
+                                    isUser ? "hidden" : "block"
+                                )}>
                                     <AvatarFallback
-                                        className={
-                                            message.role === 'user'
-                                                ? 'bg-secondary text-secondary-foreground'
-                                                : 'bg-primary text-primary-foreground'
-                                        }
+                                        className={cn(
+                                            "bg-primary/10 text-primary"
+                                        )}
                                     >
-                                        {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                                        <Bot className="h-4 w-4" />
                                     </AvatarFallback>
                                 </Avatar>
 
-                                <div className="min-w-0 flex-1 space-y-2">
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        {message.role === 'user' ? 'You' : 'Assistant'}
-                                    </p>
+                                <div className={cn(
+                                    "relative max-w-[85%] space-y-2",
+                                    isUser ? "ml-auto" : "mr-auto"
+                                )}>
+                                    {/* Tool Calls */}
+                                    {toolParts.length > 0 && (
+                                        <div className="mb-2 space-y-2">
+                                            {toolParts.map((toolPart) => {
+                                                const toolName = getToolName(toolPart);
+                                                const state = getToolState(toolPart);
+                                                const toolCallId = 'toolCallId' in toolPart ? toolPart.toolCallId : toolName;
 
-                                    {/* Display tool calls */}
-                                    {toolParts.map((toolPart) => {
-                                        const toolName = getToolName(toolPart);
-                                        const state = getToolState(toolPart);
-                                        const toolCallId = 'toolCallId' in toolPart ? toolPart.toolCallId : toolName;
+                                                return (
+                                                    <div
+                                                        key={toolCallId}
+                                                        className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        <Wrench className="h-3.5 w-3.5" />
+                                                        <span className="font-mono">{toolName}</span>
+                                                        <div className="ml-auto flex items-center">
+                                                            {state === 'result' && <span className="text-emerald-400">Completed</span>}
+                                                            {state === 'call' && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
 
-                                        return (
-                                            <div
-                                                key={toolCallId}
-                                                className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm"
-                                            >
-                                                <Wrench className="h-4 w-4 text-muted-foreground" />
-                                                <span className="font-mono text-xs">
-                                                    {toolName}
-                                                    {state === 'result' && <span className="ml-2 text-green-600 dark:text-green-400">✓</span>}
-                                                    {state === 'call' && <Loader2 className="ml-2 inline h-3 w-3 animate-spin" />}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Message content */}
+                                    {/* Text Content */}
                                     {text && (
-                                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
-                                            <Markdown>{text}</Markdown>
+                                        <div className={cn(
+                                            "prose prose-sm max-w-none wrap-break-word rounded-2xl px-5 py-3.5 shadow-sm",
+                                            isUser
+                                                ? "bg-primary text-primary-foreground prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground"
+                                                : "bg-muted/50 dark:bg-muted/20 text-foreground border border-border/50"
+                                        )}>
+                                            <Markdown
+                                                components={{
+                                                    p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                                                    code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 font-mono text-sm">{children}</code>,
+                                                    pre: ({ children }) => <pre className="bg-foreground/90 p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>
+                                                }}
+                                            >
+                                                {text}
+                                            </Markdown>
                                         </div>
                                     )}
                                 </div>
@@ -189,46 +212,75 @@ export default function Client() {
                         );
                     })}
 
-                    {/* Loading indicator */}
+                    {/* Loading/Typing Indicator */}
                     {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
                         <div className="flex gap-4">
                             <Avatar className="h-8 w-8 shrink-0">
-                                <AvatarFallback className="bg-primary text-primary-foreground">
+                                <AvatarFallback className="bg-primary/10 text-primary">
                                     <Bot className="h-4 w-4" />
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="flex items-center gap-2 pt-1">
-                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Thinking...</span>
+                            <div className="flex items-center gap-1 rounded-2xl bg-muted/50 px-4 py-3">
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.3s]" />
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.15s]" />
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
                             </div>
                         </div>
                     )}
 
                     {/* Error */}
                     {error && (
-                        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            Error: {error.message}
+                        <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                            <span className="font-semibold">Error:</span> {error.message}
                         </div>
                     )}
+
+                    {/* Anchor for auto-scroll */}
+                    <div ref={messagesEndRef} />
                 </div>
             </ScrollArea>
 
-            {/* Input */}
-            <div className="border-t border-border px-6 py-4">
-                <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl gap-3">
-                    <Textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={onKeyDown}
-                        placeholder="Type a message..."
-                        className="min-h-[52px] resize-none"
-                        rows={1}
-                        disabled={isLoading}
-                    />
-                    <Button type="submit" size="icon" className="h-[52px] w-[52px] shrink-0" disabled={isLoading || !input.trim()}>
-                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                    </Button>
-                </form>
+            {/* Footer Input Area */}
+            <div className="p-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+                <div className="mx-auto max-w-3xl">
+                    <form onSubmit={handleSubmit} className="relative flex items-center gap-2 rounded-xl border border-input bg-background p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                            onClick={handleClear}
+                            title="Clear History"
+                        >
+                            <Trash className="h-4 w-4" />
+                        </Button>
+
+                        <Textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={onKeyDown}
+                            placeholder="Message Gnome AI..."
+                            className="min-h-[44px] flex-1 resize-none border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0"
+                            rows={1}
+                            disabled={isLoading}
+                        />
+
+                        <Button
+                            type="submit"
+                            size="icon"
+                            className={cn(
+                                "h-9 w-9 shrink-0 transition-all",
+                                !input.trim() || isLoading ? "opacity-50" : "opacity-100"
+                            )}
+                            disabled={isLoading || !input.trim()}
+                        >
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </Button>
+                    </form>
+                    <div className="mt-2 text-center text-xs text-muted-foreground">
+                        Gnome AI can make mistakes. Please double-check important information.
+                    </div>
+                </div>
             </div>
         </div>
     );
