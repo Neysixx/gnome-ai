@@ -194,13 +194,14 @@ export default function Client() {
                                             "prose prose-sm max-w-none wrap-break-word rounded-2xl px-5 py-3.5 shadow-sm",
                                             isUser
                                                 ? "bg-primary text-primary-foreground prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground"
-                                                : "bg-muted/50 dark:bg-muted/20 text-foreground border border-border/50"
+                                                : "bg-muted/20 text-foreground border border-border/50"
                                         )}>
                                             <Markdown
                                                 components={{
                                                     p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
                                                     code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 font-mono text-sm">{children}</code>,
-                                                    pre: ({ children }) => <pre className="bg-foreground/90 p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>
+                                                    pre: ({ children }) => <pre className="bg-foreground/90 p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>,
+                                                    strong: ({ children }) => <strong className={cn("font-bold", !isUser && "text-primary/80")}>{children}</strong>
                                                 }}
                                             >
                                                 {text}
