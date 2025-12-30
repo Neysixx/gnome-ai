@@ -4,7 +4,7 @@
 UUID = gnome-ai-assistant@neysixx
 
 install:
-	@./scripts/install.sh
+	cd ./gnome && bun run build:install
 
 start:
 	@echo "Starting services..."
