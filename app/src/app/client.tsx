@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Bot, Loader2, Wrench, Trash } from 'lucide-react';
+import { Send, Sparkles, Loader2, Wrench, Trash } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import { ModeToggle } from '@/components/ui/theme-toggle';
@@ -108,12 +108,12 @@ export default function Client() {
     return (
         <div className="flex h-screen flex-col bg-background font-sans">
             {/* Header */}
-            <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
+            <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 px-6 py-3 backdrop-blur-md">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Bot className="h-5 w-5" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary/20 to-secondary/20 text-primary ring-1 ring-primary/10">
+                        <Sparkles className="h-5 w-5" />
                     </div>
-                    <h1 className="text-lg font-semibold tracking-tight">Gnome AI</h1>
+                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Gnome AI</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <SettingsDialog />
@@ -123,11 +123,14 @@ export default function Client() {
 
             {/* Messages */}
             <ScrollArea className="flex-1">
-                <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:px-6">
+                <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 md:px-6">
                     {messages.length === 0 && (
-                        <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-                            <h2 className="mb-3 text-2xl font-semibold tracking-tight">How can I help you today?</h2>
-                            <p className="max-w-md text-muted-foreground">
+                        <div className="flex flex-1 flex-col items-center justify-center py-24 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/5 text-primary ring-1 ring-primary/20">
+                                <Sparkles className="h-8 w-8" />
+                            </div>
+                            <h2 className="mb-3 text-3xl font-bold tracking-tight">How can I help you today?</h2>
+                            <p className="max-w-md text-muted-foreground/80 text-lg">
                                 I'm your AI assistant capable of using tools like Google Calendar or Todoist to help manage your tasks.
                             </p>
                         </div>
@@ -147,15 +150,15 @@ export default function Client() {
                                 )}
                             >
                                 <Avatar className={cn(
-                                    "h-8 w-8 shrink-0",
+                                    "h-9 w-9 shrink-0 ring-1 ring-border/50",
                                     isUser ? "hidden" : "block"
                                 )}>
                                     <AvatarFallback
                                         className={cn(
-                                            "bg-primary/10 text-primary"
+                                            "bg-background text-primary"
                                         )}
                                     >
-                                        <Bot className="h-4 w-4" />
+                                        <Sparkles className="h-4.5 w-4.5" />
                                     </AvatarFallback>
                                 </Avatar>
 
@@ -174,12 +177,12 @@ export default function Client() {
                                                 return (
                                                     <div
                                                         key={toolCallId}
-                                                        className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground"
+                                                        className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50"
                                                     >
                                                         <Wrench className="h-3.5 w-3.5" />
                                                         <span className="font-mono">{toolName}</span>
                                                         <div className="ml-auto flex items-center">
-                                                            {state === 'result' && <span className="text-emerald-400">Completed</span>}
+                                                            {state === 'result' && <span className="text-emerald-500 dark:text-emerald-400 font-semibold">Completed</span>}
                                                             {state === 'call' && <Loader2 className="h-3 w-3 animate-spin" />}
                                                         </div>
                                                     </div>
@@ -191,15 +194,15 @@ export default function Client() {
                                     {/* Text Content */}
                                     {text && (
                                         <div className={cn(
-                                            "prose prose-sm max-w-none wrap-break-word rounded-2xl px-5 py-3.5 shadow-sm",
+                                            "prose prose-sm max-w-none wrap-break-word rounded-2xl px-5 py-3.5",
                                             isUser
-                                                ? "bg-primary text-primary-foreground prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground"
-                                                : "bg-muted/20 text-foreground border border-border/50"
+                                                ? "bg-primary text-primary-foreground shadow-md shadow-primary/10 prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground"
+                                                : "bg-muted/50 text-foreground border border-border/40 shadow-sm"
                                         )}>
                                             <Markdown
                                                 components={{
                                                     p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-                                                    code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 font-mono text-sm">{children}</code>,
+                                                    code: ({ children }) => <code className="bg-foreground/10 rounded px-1.5 py-0.5 font-mono text-sm">{children}</code>,
                                                     pre: ({ children }) => <pre className="bg-foreground/90 p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>,
                                                     strong: ({ children }) => <strong className={cn("font-bold", !isUser && "text-primary/80")}>{children}</strong>
                                                 }}
@@ -216,12 +219,12 @@ export default function Client() {
                     {/* Loading/Typing Indicator */}
                     {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
                         <div className="flex gap-4">
-                            <Avatar className="h-8 w-8 shrink-0">
-                                <AvatarFallback className="bg-primary/10 text-primary">
-                                    <Bot className="h-4 w-4" />
+                            <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border/50">
+                                <AvatarFallback className="bg-background text-primary">
+                                    <Sparkles className="h-4.5 w-4.5 animate-pulse" />
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="flex items-center gap-1 rounded-2xl bg-muted/50 px-4 py-3">
+                            <div className="flex items-center gap-1.5 rounded-2xl border border-border/40 bg-muted/50 px-5 py-4 shadow-sm">
                                 <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.3s]" />
                                 <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.15s]" />
                                 <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
@@ -231,7 +234,7 @@ export default function Client() {
 
                     {/* Error */}
                     {error && (
-                        <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                        <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in slide-in-from-top-2">
                             <span className="font-semibold">Error:</span> {error.message}
                         </div>
                     )}
@@ -242,14 +245,14 @@ export default function Client() {
             </ScrollArea>
 
             {/* Footer Input Area */}
-            <div className="p-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+            <div className="p-4 bg-background/80 backdrop-blur-md">
                 <div className="mx-auto max-w-3xl">
-                    <form onSubmit={handleSubmit} className="relative flex items-center gap-2 rounded-xl border border-input bg-background p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                    <form onSubmit={handleSubmit} className="relative flex items-center gap-2 rounded-2xl border border-input bg-background/50 p-2 shadow-sm focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl"
                             onClick={handleClear}
                             title="Clear History"
                         >
@@ -261,7 +264,7 @@ export default function Client() {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={onKeyDown}
                             placeholder="Message Gnome AI..."
-                            className="min-h-[44px] flex-1 resize-none border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0"
+                            className="min-h-[48px] flex-1 resize-none border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base"
                             rows={1}
                             disabled={isLoading}
                         />
@@ -270,15 +273,15 @@ export default function Client() {
                             type="submit"
                             size="icon"
                             className={cn(
-                                "h-9 w-9 shrink-0 transition-all",
-                                !input.trim() || isLoading ? "opacity-50" : "opacity-100"
+                                "h-10 w-10 shrink-0 transition-all rounded-xl shadow-sm",
+                                !input.trim() || isLoading ? "opacity-50" : "opacity-100 hover:scale-105 active:scale-95"
                             )}
                             disabled={isLoading || !input.trim()}
                         >
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         </Button>
                     </form>
-                    <div className="mt-2 text-center text-xs text-muted-foreground">
+                    <div className="mt-3 text-center text-xs text-muted-foreground/70">
                         Gnome AI can make mistakes. Please double-check important information.
                     </div>
                 </div>
