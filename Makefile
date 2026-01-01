@@ -4,7 +4,7 @@
 UUID = gnome-ai-assistant@neysixx
 
 install:
-	cd ./gnome && bun run build:install
+	docker compose up --build -d &&	cd ./gnome && bun run build:install
 
 start:
 	@echo "Starting services..."
