@@ -202,9 +202,11 @@ export default function Client() {
                                             <Markdown
                                                 components={{
                                                     p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-                                                    code: ({ children }) => <code className="bg-foreground/10 rounded px-1.5 py-0.5 font-mono text-sm">{children}</code>,
-                                                    pre: ({ children }) => <pre className="bg-foreground/90 p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>,
-                                                    strong: ({ children }) => <strong className={cn("font-bold", !isUser && "text-primary/80")}>{children}</strong>
+                                                    code: ({ children }) => <code className="bg-foreground/5 rounded px-1.5 py-0.5 font-mono text-sm text-foreground/80">{children}</code>,
+                                                    pre: ({ children }) => <pre className=" p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>,
+                                                    strong: ({ children }) => <strong className={cn("font-bold", !isUser && "text-primary/80")}>{children}</strong>,
+                                                    h2: ({ children }) => <h2 className="text-lg text-foreground font-bold mb-2">{children}</h2>,
+                                                    h3: ({ children }) => <h3 className="text-md text-foreground font-bold mb-2">{children}</h3>
                                                 }}
                                             >
                                                 {text}
@@ -217,7 +219,7 @@ export default function Client() {
                     })}
 
                     {/* Tool Execution Indicator */}
-                    {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && getToolParts(messages[messages.length - 1]).some(p => !('state' in p) || p.state === 'call') && (
+                    {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && getToolParts(messages[messages.length - 1]).some(p => !('state' in p)) && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground/80 px-4 py-2 animate-in fade-in slide-in-from-bottom-2">
                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
                                 <Loader2 className="h-3 w-3 animate-spin" />
