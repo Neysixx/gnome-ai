@@ -20,13 +20,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-interface AppConfig {
-    llm: {
-        model: string;
-        language: 'auto' | 'en' | 'fr';
-    };
-}
+import { Textarea } from '@/components/ui/textarea';
+import type { AppConfig } from '@/lib/config';
 
 const LANGUAGE_OPTIONS = [
     { value: 'auto', label: 'Auto (detect)' },
@@ -166,6 +161,29 @@ export function SettingsDialog() {
                             />
                             <p className="text-xs text-muted-foreground">
                                 OpenRouter model ID (e.g., anthropic/claude-sonnet-4, openai/gpt-4o)
+                            </p>
+                        </div>
+
+                        {/* Preprompt */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="preprompt">Custom Instructions</Label>
+                            <Textarea
+                                id="preprompt"
+                                value={config.llm.preprompt || ''}
+                                onChange={(e) => {
+                                    const newConfig = {
+                                        ...config,
+                                        llm: { ...config.llm, preprompt: e.target.value },
+                                    };
+                                    setConfig(newConfig);
+                                }}
+                                onBlur={() => saveConfig({ llm: config.llm })}
+                                placeholder="e.g. Always be formal, or concise..."
+                                className="min-h-[100px]"
+                                disabled={saving}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                These instructions will be added to the system prompt.
                             </p>
                         </div>
 

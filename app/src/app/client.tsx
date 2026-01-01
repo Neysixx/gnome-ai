@@ -216,6 +216,16 @@ export default function Client() {
                         );
                     })}
 
+                    {/* Tool Execution Indicator */}
+                    {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && getToolParts(messages[messages.length - 1]).some(p => !('state' in p) || p.state === 'call') && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground/80 px-4 py-2 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            </div>
+                            <span className="font-medium">Executing tools...</span>
+                        </div>
+                    )}
+
                     {/* Loading/Typing Indicator */}
                     {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
                         <div className="flex gap-4">
@@ -264,8 +274,8 @@ export default function Client() {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={onKeyDown}
                             placeholder="Message Gnome AI..."
-                            className="min-h-[48px] flex-1 resize-none border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base"
-                            rows={1}
+                            className="min-h-[80px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base"
+                            rows={3}
                             disabled={isLoading}
                         />
 

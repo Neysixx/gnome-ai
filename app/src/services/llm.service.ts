@@ -9,6 +9,7 @@ import { getConfigValue, getLanguageInstruction } from '../lib/config';
  */
 function buildSystemPrompt(): string {
     const languageInstruction = getLanguageInstruction();
+    const preprompt = getConfigValue('llm').preprompt || '';
 
     return `You are a helpful and concise AI assistant. You have access to tools to interact with external services like Google Calendar, Todoist, Gmail, etc.
 
@@ -17,6 +18,7 @@ When using a tool:
 - Display the result in a readable and well-formatted way
 - If an error occurs, explain it clearly
 
+${preprompt ? `\nUser Instructions:\n${preprompt}\n` : ''}
 ${languageInstruction}`;
 }
 
