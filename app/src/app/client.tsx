@@ -113,7 +113,7 @@ export default function Client() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary/20 to-secondary/20 text-primary ring-1 ring-primary/10">
                         <Sparkles className="h-5 w-5" />
                     </div>
-                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Gnome AI</h1>
+                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">AI Assistant</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <SettingsDialog />
@@ -265,7 +265,7 @@ export default function Client() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={onKeyDown}
-                            placeholder="Message Gnome AI..."
+                            placeholder="Message AI Assistant..."
                             className="min-h-[80px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base"
                             rows={3}
                             disabled={isLoading}
@@ -284,7 +284,7 @@ export default function Client() {
                         </Button>
                     </form>
                     <div className="mt-3 text-center text-xs text-muted-foreground/70">
-                        Gnome AI can make mistakes. Please double-check important information.
+                        AI Assistant can make mistakes. Please double-check important information.
                     </div>
                 </div>
             </div>

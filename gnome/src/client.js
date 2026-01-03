@@ -21,7 +21,7 @@ app.connect('activate', () => {
 
     const window = new Gtk.ApplicationWindow({
         application: app,
-        title: 'GNOME AI Assistant',
+        title: 'AI Assistant',
         default_width: 500,
         default_height: 800,
     });

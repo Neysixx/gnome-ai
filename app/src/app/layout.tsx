@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gnome AI",
-  description: "AI Assistant powered by Claude + MCP",
+  title: "AI Assistant",
+  description: "AI Assistant",
 };
 
 export default function RootLayout({
