@@ -1,18 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
-/**
- * Application configuration types
- */
-export interface LLMConfig {
-    model: string;
-    language: 'auto' | 'en' | 'fr';
-    preprompt?: string;
-}
-
-export interface AppConfig extends Record<string, unknown> {
-    llm: LLMConfig;
-}
+import type { AppConfig } from '@/types/config';
 
 /**
  * Get config file paths

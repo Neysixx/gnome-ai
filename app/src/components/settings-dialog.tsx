@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Loader2 } from 'lucide-react';
+import { Settings, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -21,7 +21,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { AppConfig } from '@/lib/config';
+import type { AppConfig, LLMConfig } from '@/types/config';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/query-keys';
 
 const LANGUAGE_OPTIONS = [
     { value: 'auto', label: 'Auto (detect)' },
@@ -29,75 +31,55 @@ const LANGUAGE_OPTIONS = [
     { value: 'fr', label: 'French' },
 ] as const;
 
-export function SettingsDialog() {
+export function SettingsDialog({ config }: { config: AppConfig }) {
     const [open, setOpen] = useState(false);
-    const [config, setConfig] = useState<AppConfig | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
+    const [prepromptValue, setPrepromptValue] = useState(config?.llm.preprompt || '');
+    const queryClient = useQueryClient();
 
-    // Load config when dialog opens
+    // Reset preprompt value when config changes or dialog opens
     useEffect(() => {
-        if (open && !config) {
-            loadConfig();
+        if (config?.llm.preprompt !== undefined) {
+            setPrepromptValue(config.llm.preprompt || '');
         }
-    }, [open, config]);
+    }, [config?.llm.preprompt, open]);
 
-    async function loadConfig() {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/config');
-            if (res.ok) {
-                const data = await res.json();
-                setConfig(data);
-            }
-        } catch (error) {
-            console.error('Failed to load config:', error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function saveConfig(updates: Partial<AppConfig>) {
-        setSaving(true);
-        try {
-            const res = await fetch('/api/config', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+    const { mutate: updateConfigMutation, isPending: isUpdatingConfig } = useMutation<AppConfig, Error, Partial<AppConfig>>({
+        mutationFn: async (updates: Partial<AppConfig>) => {
+            const response = await fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(updates),
             });
-            if (res.ok) {
-                const data = await res.json();
-                setConfig(data);
+
+            if (!response.ok) {
+                throw new Error('Failed to update config');
             }
-        } catch (error) {
-            console.error('Failed to save config:', error);
-        } finally {
-            setSaving(false);
-        }
+
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CONFIG] });
+        },
+    });
+
+    const hasPrepromptChanged = prepromptValue !== (config?.llm.preprompt || '');
+
+    function handlePrepromptSubmit() {
+        if (!config) return;
+        updateConfigMutation({ llm: { ...config.llm, preprompt: prepromptValue } });
     }
 
-    function handleLanguageChange(value: string) {
+
+    function handleLanguageChange(value: LLMConfig['language']) {
         if (!config) return;
-        const newConfig = {
-            ...config,
-            llm: { ...config.llm, language: value as 'auto' | 'en' | 'fr' },
-        };
-        setConfig(newConfig);
-        saveConfig({ llm: newConfig.llm });
+        updateConfigMutation({ llm: { ...config.llm, language: value } });
     }
 
-    function handleModelChange(value: string) {
+    function handleModelChange(value: LLMConfig['model']) {
         if (!config) return;
-        const newConfig = {
-            ...config,
-            llm: { ...config.llm, model: value },
-        };
-        setConfig(newConfig);
-    }
-
-    function handleModelBlur() {
-        if (!config) return;
-        saveConfig({ llm: config.llm });
+        updateConfigMutation({ llm: { ...config.llm, model: value } });
     }
 
     return (
@@ -116,7 +98,7 @@ export function SettingsDialog() {
                     </DialogDescription>
                 </DialogHeader>
 
-                {loading ? (
+                {isUpdatingConfig ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
@@ -124,11 +106,11 @@ export function SettingsDialog() {
                     <div className="grid gap-6 py-4">
                         {/* Language */}
                         <div className="grid gap-2">
-                            <Label htmlFor="language">Response Language</Label>
+                            <Label htmlFor="language">Language</Label>
                             <Select
                                 value={config.llm.language}
                                 onValueChange={handleLanguageChange}
-                                disabled={saving}
+                                disabled={isUpdatingConfig}
                             >
                                 <SelectTrigger id="language">
                                     <SelectValue placeholder="Select a language" />
@@ -155,9 +137,8 @@ export function SettingsDialog() {
                                 id="model"
                                 value={config.llm.model}
                                 onChange={(e) => handleModelChange(e.target.value)}
-                                onBlur={handleModelBlur}
                                 placeholder="anthropic/claude-sonnet-4"
-                                disabled={saving}
+                                disabled={isUpdatingConfig}
                             />
                             <p className="text-xs text-muted-foreground">
                                 OpenRouter model ID (e.g., anthropic/claude-sonnet-4, openai/gpt-4o)
@@ -166,28 +147,36 @@ export function SettingsDialog() {
 
                         {/* Preprompt */}
                         <div className="grid gap-2">
-                            <Label htmlFor="preprompt">Custom Instructions</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="preprompt">Custom Instructions</Label>
+                                {hasPrepromptChanged && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="default"
+                                        onClick={handlePrepromptSubmit}
+                                        disabled={isUpdatingConfig}
+                                        className="h-7 gap-1.5 px-2.5"
+                                    >
+                                        <Check className="h-3.5 w-3.5" />
+                                        <span>Save</span>
+                                    </Button>
+                                )}
+                            </div>
                             <Textarea
                                 id="preprompt"
-                                value={config.llm.preprompt || ''}
-                                onChange={(e) => {
-                                    const newConfig = {
-                                        ...config,
-                                        llm: { ...config.llm, preprompt: e.target.value },
-                                    };
-                                    setConfig(newConfig);
-                                }}
-                                onBlur={() => saveConfig({ llm: config.llm })}
+                                value={prepromptValue}
+                                onChange={(e) => setPrepromptValue(e.target.value)}
                                 placeholder="e.g. Always be formal, or concise..."
                                 className="min-h-[100px]"
-                                disabled={saving}
+                                disabled={isUpdatingConfig}
                             />
                             <p className="text-xs text-muted-foreground">
                                 These instructions will be added to the system prompt.
                             </p>
                         </div>
 
-                        {saving && (
+                        {isUpdatingConfig && (
                             <p className="text-xs text-muted-foreground flex items-center gap-2">
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Saving...

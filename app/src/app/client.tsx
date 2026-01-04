@@ -12,12 +12,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Sparkles, Loader2, Wrench, Trash } from 'lucide-react';
+import { Send, Sparkles, Loader2, Wrench, Trash, Mic, MicOff } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ModeToggle } from '@/components/ui/theme-toggle';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { cn } from '@/lib/utils';
+import type { AppConfig } from '@/types/config';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { useQuery } from '@tanstack/react-query';
 
 // Helper to extract text from a message
 function getMessageText(message: UIMessage): string {
@@ -40,8 +44,21 @@ function getToolState(part: ReturnType<typeof getToolParts>[number]): string {
     return 'unknown';
 }
 
-export default function Client() {
+export default function Client({ initialConfig }: { initialConfig: AppConfig }) {
     const [input, setInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const [uiError, setUiError] = useState<string | null>(null);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+    const { data: config } = useQuery({
+        queryKey: [QUERY_KEYS.CONFIG],
+        queryFn: async () => {
+            const res = await fetch('/api/config');
+            if (!res.ok) throw new Error('Failed to fetch config');
+            return res.json() as Promise<AppConfig>;
+        },
+        initialData: initialConfig,
+    });
 
     const transport = useMemo(
         () =>
@@ -80,7 +97,165 @@ export default function Client() {
     // Auto-scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, isLoading]);
+    }, [messages, isLoading, uiError]);
+
+    const startListening = async () => {
+        if (typeof window === 'undefined') return;
+
+        const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognitionConstructor) {
+            setUiError('The voice recognition is not supported by this browser.');
+            return;
+        }
+
+        // Check the network connection
+        if (!navigator.onLine) {
+            setUiError('You must be connected to the internet to use the voice recognition.');
+            return;
+        }
+
+        try {
+            // Request the microphone permission
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+        } catch (err: unknown) {
+            console.error("Error requesting microphone permission:", err);
+            if ((err as Error).name === 'NotAllowedError' || (err as Error).name === 'PermissionDeniedError') {
+                setUiError("Microphone permission denied. Allow access in the browser settings.");
+            } else if ((err as Error).name === 'NotFoundError' || (err as Error).name === 'DevicesNotFoundError') {
+                setUiError("No microphone detected. Check your audio devices.");
+            } else {
+                setUiError(`Error accessing the microphone: ${(err as Error).message || (err as Error).name}`);
+            }
+            return;
+        }
+
+        try {
+            const recognition = new SpeechRecognitionConstructor();
+            recognition.continuous = false; // Changed to false for stability
+            recognition.interimResults = true;
+            recognition.lang = 'fr-FR'; // Must use the language settings from the config
+            recognition.maxAlternatives = 1;
+
+            let startText = input; // Save the initial text
+            let restartTimeout: NodeJS.Timeout;
+
+            recognition.onstart = () => {
+                startText = input; // Update the initial text
+                setUiError(null);
+            };
+
+            recognition.onresult = (event: SpeechRecognitionEvent) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                // Iterate through all results from the beginning (not from resultIndex)
+                for (let i = 0; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                // Build the complete text: initial text + final results + interim results
+                const newText = (startText + ' ' + finalTranscript + interimTranscript).trim();
+                setInput(newText);
+
+                // If there are final results, update the base text
+                if (finalTranscript) {
+                    startText = (startText + ' ' + finalTranscript).trim();
+                }
+            };
+
+            recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+                console.error('Voice recognition error:', event.error);
+
+                switch (event.error) {
+                    case 'not-allowed':
+                    case 'service-not-allowed':
+                        setUiError("Microphone access denied. Check the browser permissions.");
+                        break;
+                    case 'no-speech':
+                        // Restart automatically if no speech is detected
+                        if (isListening) {
+                            restartTimeout = setTimeout(() => {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.log('Impossible to restart the recognition');
+                                }
+                            }, 100);
+                        }
+                        return; // Do not stop the listening
+                    case 'network':
+                        setUiError("Network error. Check your internet connection. Chrome/Edge officially recommended.");
+                        break;
+                    case 'aborted':
+                        // Ignored, probably a voluntary stop
+                        break;
+                    case 'audio-capture':
+                        setUiError("Impossible to access the microphone. It may be used by another application.");
+                        break;
+                    case 'bad-grammar':
+                        setUiError("Grammar configuration error.");
+                        break;
+                    default:
+                        setUiError(`Voice recognition error: ${event.error}`);
+                }
+
+                setIsListening(false);
+            };
+
+            recognition.onend = () => {
+                console.log('Voice recognition ended');
+                // Auto-redémarrage si toujours en mode écoute
+                if (isListening && recognitionRef.current === recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('Impossible to restart:', e);
+                        setIsListening(false);
+                    }
+                } else {
+                    setIsListening(false);
+                    recognitionRef.current = null;
+                }
+            };
+
+            recognitionRef.current = recognition;
+            recognition.start();
+            setIsListening(true);
+            setUiError(null);
+
+        } catch (e: any) {
+            console.error("Voice recognition initialization error:", e);
+            setUiError(`Impossible to initialize the voice recognition: ${e.message || 'Unknown error'}`);
+            setIsListening(false);
+        }
+    };
+
+    const stopListening = () => {
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+                recognitionRef.current = null;
+            } catch (e) {
+                console.error("Error stopping the recognition", e);
+            }
+        }
+        setIsListening(false);
+    };
+
+    const toggleVoiceInput = () => {
+        if (isListening) {
+            stopListening();
+        } else {
+            startListening();
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,6 +266,7 @@ export default function Client() {
             parts: [{ type: 'text', text: input }],
         });
         setInput('');
+        setUiError(null);
     };
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -103,20 +279,29 @@ export default function Client() {
     const handleClear = () => {
         setMessages([]);
         localStorage.removeItem('gnome-ai-history');
+        setUiError(null);
     };
+
+    useEffect(() => {
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        };
+    }, []);
 
     return (
         <div className="flex h-screen flex-col bg-background font-sans">
             {/* Header */}
             <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 px-6 py-3 backdrop-blur-md">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary/20 to-secondary/20 text-primary ring-1 ring-primary/10">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-tr from-primary/20 to-secondary/20 text-primary ring-1 ring-primary/10">
                         <Sparkles className="h-5 w-5" />
                     </div>
-                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">AI Assistant</h1>
+                    <h1 className="text-xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">AI Assistant</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <SettingsDialog />
+                    <SettingsDialog config={config} />
                     <ModeToggle />
                 </div>
             </header>
@@ -200,13 +385,20 @@ export default function Client() {
                                                 : "bg-muted/50 text-foreground border border-border/40 shadow-sm"
                                         )}>
                                             <Markdown
+                                                remarkPlugins={[remarkGfm]}
                                                 components={{
                                                     p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
                                                     code: ({ children }) => <code className="bg-foreground/5 rounded px-1.5 py-0.5 font-mono text-sm text-foreground/80">{children}</code>,
                                                     pre: ({ children }) => <pre className=" p-4 rounded-lg overflow-x-auto text-foreground my-2">{children}</pre>,
                                                     strong: ({ children }) => <strong className={cn("font-bold", !isUser && "text-primary/80")}>{children}</strong>,
                                                     h2: ({ children }) => <h2 className="text-lg text-foreground font-bold mb-2">{children}</h2>,
-                                                    h3: ({ children }) => <h3 className="text-md text-foreground font-bold mb-2">{children}</h3>
+                                                    h3: ({ children }) => <h3 className="text-md text-foreground font-bold mb-2">{children}</h3>,
+                                                    table: ({ children }) => <div className="my-4 w-full max-w-full overflow-x-auto"><table className="w-full border-collapse border border-border/50 text-sm">{children}</table></div>,
+                                                    thead: ({ children }) => <thead className="bg-muted/50 text-left">{children}</thead>,
+                                                    tbody: ({ children }) => <tbody className="divide-y divide-border/50">{children}</tbody>,
+                                                    tr: ({ children }) => <tr className="transition-colors hover:bg-muted/30">{children}</tr>,
+                                                    th: ({ children }) => <th className="border-r border-border/50 px-4 py-2 font-semibold text-muted-foreground last:border-r-0">{children}</th>,
+                                                    td: ({ children }) => <td className="border-r border-border/50 px-4 py-2 last:border-r-0">{children}</td>,
                                                 }}
                                             >
                                                 {text}
@@ -235,9 +427,9 @@ export default function Client() {
                     )}
 
                     {/* Error */}
-                    {error && (
+                    {(error || uiError) && (
                         <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in slide-in-from-top-2">
-                            <span className="font-semibold">Error:</span> {error.message}
+                            <span className="font-semibold">Error:</span> {uiError || error?.message}
                         </div>
                     )}
 
@@ -265,23 +457,43 @@ export default function Client() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={onKeyDown}
-                            placeholder="Message AI Assistant..."
-                            className="min-h-[80px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base"
+                            placeholder={isListening ? "Listening..." : "Message AI Assistant..."}
+                            className={cn(
+                                "min-h-[80px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base",
+                                isListening && "placeholder:text-primary animate-pulse"
+                            )}
                             rows={3}
                             disabled={isLoading}
                         />
 
-                        <Button
-                            type="submit"
-                            size="icon"
-                            className={cn(
-                                "h-10 w-10 shrink-0 transition-all rounded-xl shadow-sm",
-                                !input.trim() || isLoading ? "opacity-50" : "opacity-100 hover:scale-105 active:scale-95"
-                            )}
-                            disabled={isLoading || !input.trim()}
-                        >
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                type="button"
+                                variant={isListening ? "default" : "ghost"}
+                                size="icon"
+                                className={cn(
+                                    "h-10 w-10 transition-all rounded-xl",
+                                    isListening ? "bg-red-500 hover:bg-red-600 text-foreground animate-pulse" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                )}
+                                onClick={toggleVoiceInput}
+                                title={isListening ? "Stop Listening" : "Start Voice Recognition"}
+                                disabled={isLoading}
+                            >
+                                {isListening ? <MicOff className="h-4 w-4 text-foreground" /> : <Mic className="h-4 w-4 text-foreground" />}
+                            </Button>
+
+                            <Button
+                                type="submit"
+                                size="icon"
+                                className={cn(
+                                    "h-10 w-10 shrink-0 transition-all rounded-xl shadow-sm",
+                                    !input.trim() || isLoading ? "opacity-50" : "opacity-100 hover:scale-105 active:scale-95"
+                                )}
+                                disabled={isLoading || !input.trim()}
+                            >
+                                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                        </div>
                     </form>
                     <div className="mt-3 text-center text-xs text-muted-foreground/70">
                         AI Assistant can make mistakes. Please double-check important information.
