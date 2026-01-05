@@ -4,7 +4,9 @@
     "build": "./scripts/build.sh",
     "build:dev": "./scripts/build.sh --unsafe-reload",
     "build:install": "./scripts/build.sh --install",
-    "check:types": "tsc -noEmit"
+    "check:types": "tsc -noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "type": "module",
   "devDependencies": {
