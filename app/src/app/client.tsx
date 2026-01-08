@@ -83,7 +83,7 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
     isListening: isVoskListening,
     serverStatus: voskServerStatus,
   } = useVoskWebSocket({
-    serverUrl: 'ws://localhost:2700',
+    config: config,
     onResult: (text) => {
       setInput((prev) => {
         const newText = prev ? `${prev} ${text}` : text;

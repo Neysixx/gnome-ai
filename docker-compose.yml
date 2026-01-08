@@ -20,14 +20,25 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=9999
-  speech-server:
+  speech-server-fr:
     image: alphacep/kaldi-fr:latest
-    container_name: speech-server
+    container_name: speech-server-fr
     ports:
       - "2700:2700"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2700"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  speech-server-en:
+    image: alphacep/kaldi-en:latest
+    container_name: speech-server-en
+    ports:
+      - "2701:2701"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2701"]
       interval: 10s
       timeout: 5s
       retries: 3

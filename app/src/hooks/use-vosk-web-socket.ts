@@ -11,7 +11,8 @@ export interface UseVoskWebSocketReturn {
 }
 
 export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWebSocketReturn {
-  const { serverUrl = 'ws://localhost:2700', onResult, onPartialResult, onError } = options;
+  const { config, onResult, onPartialResult, onError } = options;
+  const serverUrl = config?.language === 'fr' ? 'ws://localhost:2700' : 'ws://localhost:2701';
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
