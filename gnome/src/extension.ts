@@ -13,7 +13,7 @@ export const Indicator = GObject.registerClass(
     private _extensionPath = '';
     private _servicesReady = false;
 
-    async _init() {
+    _init() {
       super._init({
         style_class: 'panel-button',
         reactive: true,
@@ -66,7 +66,7 @@ export const Indicator = GObject.registerClass(
 
       Main.notify('AI Assistant', 'Configuring services...');
 
-      await Docker.downloadDockerCompose(async (downloadSuccess) => {
+      await Docker.downloadDockerCompose(this._extensionPath, async (downloadSuccess) => {
         if (downloadSuccess) {
           Docker.startDockerContainers(async (startSuccess) => {
             this._servicesReady = startSuccess;
@@ -212,7 +212,8 @@ export default class AiAssistant extends Extension {
     // @ts-ignore
     this._indicator = new Indicator();
     await this._indicator.setExtensionPath(this.path);
-    Main.panel.add_child(this._indicator);
+    // @ts-ignore
+    Main.panel._rightBox.insert_child_at_index(this._indicator, 0);
   }
 
   async disable() {
