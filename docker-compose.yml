@@ -1,9 +1,6 @@
 services:
   app:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
-    container_name: gnome-ai-assistant-nextjs
+    image: neysixx/gnome-ai-assistant-nextjs:v1.0.0
     restart: unless-stopped
     ports:
       - "9999:9999"
@@ -13,8 +10,8 @@ services:
       - ./config.json:/app/config.json:rw
     environment:
       # Secrets from .env file at monorepo root
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
+      - COMPOSIO_API_KEY=\${COMPOSIO_API_KEY}
 
       # Application Configuration
       - NODE_ENV=production
