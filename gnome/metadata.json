@@ -2,9 +2,6 @@
   "name": "AI Assistant",
   "description": "AI Assistant",
   "uuid": "gnome-ai-assistant@neysixx",
-  "shell-version": [
-    "46",
-    "47"
-  ],
+  "shell-version": ["46", "47"],
   "version-name": "1.0.0"
 }

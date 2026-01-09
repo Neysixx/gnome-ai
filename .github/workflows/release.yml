@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: node
+
+  build-and-push-docker:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Next.js
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          tags: |
+            neysixx/gnome-ai-assistant-nextjs:latest
+            neysixx/gnome-ai-assistant-nextjs:${{ needs.release-please.outputs.tag_name }}
+            ghcr.io/${{ github.repository }}/nextjs:latest
+            ghcr.io/${{ github.repository }}/nextjs:${{ needs.release-please.outputs.tag_name }}
+
+      # Put the new version of the docker-compose.yml
+      - name: Generate docker-compose.yml
+        run: |
+          cat > docker-compose.yml << EOF
+          services:
+              app:
+                image: neysixx/gnome-ai-assistant-nextjs:${{ needs.release-please.outputs.tag_name }}
+                restart: unless-stopped
+                ports:
+                  - "9999:9999"
+                volumes:
+                  # Mount config files (read-write for user overrides)
+                  - ./config.default.json:/app/config.default.json:ro
+                  - ./config.json:/app/config.json:rw
+              environment:
+                # Secrets from .env file at monorepo root
+                - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+                - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+
+                # Application Configuration
+                - NODE_ENV=production
+                - HOST=0.0.0.0
+                - PORT=9999
+          EOF
+
+      # Upload docker-compose.yml as a release asset
+      - name: Upload docker-compose.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.release-please.outputs.tag_name }} \
+            docker-compose.yml \
+            --clobber
