@@ -1,7 +1,10 @@
 {
   "name": "ai-assistant",
   "private": true,
-  "workspaces": ["app", "gnome"],
+  "workspaces": [
+    "app",
+    "gnome"
+  ],
   "scripts": {
     "prepare": "husky",
     "lint": "biome check .",
@@ -22,6 +25,9 @@
     "lint-staged": "^15.0.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,css}": ["biome check --write --no-errors-on-unmatched"]
-  }
+    "*.{js,jsx,ts,tsx,json,css}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
+  "version": "1.0.0"
 }
