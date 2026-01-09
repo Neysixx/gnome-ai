@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "node",
+  "release-type": "simple",
   "include-v-in-tag": true,
   "separate-pull-requests": false,
   "extra-files": [],
@@ -9,15 +9,33 @@
   "packages": {
     ".": {
       "changelog-sections": [
-        { "type": "feat", "section": "Features" },
-        { "type": "fix", "section": "Bug Fixes" },
-        { "type": "perf", "section": "Performance" },
-        { "type": "refactor", "section": "Refactor" },
-        { "type": "chore", "section": "Miscellaneous" },
-        { "type": "docs", "section": "Documentation" }
+        {
+          "type": "feat",
+          "section": "Features"
+        },
+        {
+          "type": "fix",
+          "section": "Bug Fixes"
+        },
+        {
+          "type": "perf",
+          "section": "Performance"
+        },
+        {
+          "type": "refactor",
+          "section": "Refactor"
+        },
+        {
+          "type": "chore",
+          "section": "Miscellaneous"
+        },
+        {
+          "type": "docs",
+          "section": "Documentation"
+        }
       ],
-      "release-type": "node",
-      "package-name": "seox",
+      "release-type": "simple",
+      "package-name": "gnome-ai",
       "changelog-path": "CHANGELOG.md"
     }
   }

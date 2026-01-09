@@ -20,7 +20,7 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          release-type: node
+          release-type: simple
 
   build-and-push-docker:
     needs: release-please
@@ -28,6 +28,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: "🔧 Setup Bun Runtime"
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: "📦 Install Dependencies"
+        run: bun install --frozen-lockfile
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,8 +55,11 @@ jobs:
           tags: |
             neysixx/gnome-ai-assistant-nextjs:latest
             neysixx/gnome-ai-assistant-nextjs:${{ needs.release-please.outputs.tag_name }}
-            ghcr.io/${{ github.repository }}/nextjs:latest
-            ghcr.io/${{ github.repository }}/nextjs:${{ needs.release-please.outputs.tag_name }}
+
+      - name: Build GNOME extension
+        run: |
+          cd gnome
+          bun run build
 
       # Put the new version of the docker-compose.yml
       - name: Generate docker-compose.yml
@@ -64,22 +75,45 @@ jobs:
                   # Mount config files (read-write for user overrides)
                   - ./config.default.json:/app/config.default.json:ro
                   - ./config.json:/app/config.json:rw
-              environment:
-                # Secrets from .env file at monorepo root
-                - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-                - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+                environment:
+                  # Secrets from .env file at monorepo root
+                  - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
+                  - COMPOSIO_API_KEY=\${COMPOSIO_API_KEY}
 
-                # Application Configuration
-                - NODE_ENV=production
-                - HOST=0.0.0.0
-                - PORT=9999
+                  # Application Configuration
+                  - NODE_ENV=production
+                  - HOST=0.0.0.0
+                  - PORT=9999
+              speech-server-fr:
+                image: alphacep/kaldi-fr:latest
+                container_name: speech-server-fr
+                ports:
+                  - "2700:2700"
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:2700"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 3
+              speech-server-en:
+                image: alphacep/kaldi-en:latest
+                container_name: speech-server-en
+                ports:
+                  - "2701:2701"
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:2701"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 3
           EOF
 
-      # Upload docker-compose.yml as a release asset
-      - name: Upload docker-compose.yml
+      # Upload release assets
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.release-please.outputs.tag_name }} \
             docker-compose.yml \
+            gnome/gnome-ai-assistant@neysixx.shell-extension.zip \
             --clobber
