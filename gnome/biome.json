@@ -1,10 +1,9 @@
 {
-  "root": false,
   "extends": ["../biome.json"],
   "javascript": {
     "globals": ["imports", "log", "print", "global", "ARGV", "_", "C_", "N_", "ngettext"]
   },
   "files": {
-    "includes": ["!**/node_modules", "!**/dist", "!**/*.zip"]
+    "ignore": ["node_modules", "dist", "*.zip"]
   }
 }

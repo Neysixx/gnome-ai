@@ -1,8 +1,5 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +21,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import type { AppConfig, LLMConfig } from '@/types/config';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check, Loader2, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const LANGUAGE_OPTIONS = [
   { value: 'auto', label: 'Auto (detect)' },

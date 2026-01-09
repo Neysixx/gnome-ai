@@ -1,8 +1,8 @@
 {
-    "$schema": "./config.schema.json",
-    "llm": {
-        "model": "xiaomi/mimo-v2-flash:free",
-        "language": "auto",
-        "preprompt": ""
-    }
+  "$schema": "./config.schema.json",
+  "llm": {
+    "model": "xiaomi/mimo-v2-flash:free",
+    "language": "auto",
+    "preprompt": ""
+  }
 }

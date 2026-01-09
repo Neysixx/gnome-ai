@@ -1,18 +1,5 @@
 'use client';
 
-import { useChat } from '@ai-sdk/react';
-import { useQuery } from '@tanstack/react-query';
-import {
-  DefaultChatTransport,
-  getToolName,
-  isToolUIPart,
-  type UIMessage,
-  type UIMessagePart,
-} from 'ai';
-import { Loader2, Mic, MicOff, Send, Sparkles, Trash, Wrench } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -23,6 +10,19 @@ import { useVoskWebSocket } from '@/hooks/use-vosk-web-socket';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import type { AppConfig } from '@/types/config';
+import { useChat } from '@ai-sdk/react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  DefaultChatTransport,
+  type UIMessage,
+  type UIMessagePart,
+  getToolName,
+  isToolUIPart,
+} from 'ai';
+import { Loader2, Mic, MicOff, Send, Sparkles, Trash, Wrench } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Helper to extract text from a message
 function getMessageText(message: UIMessage): string {

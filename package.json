@@ -1,20 +1,20 @@
 {
   "name": "ai-assistant",
   "private": true,
-  "workspaces": [
-    "app",
-    "gnome"
-  ],
+  "workspaces": ["app", "gnome"],
   "scripts": {
     "prepare": "husky",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "format:check": "biome check",
     "check": "biome check --write .",
     "ci": "biome ci .",
     "dev:app": "bun --filter app dev",
     "dev:gnome": "bun --filter gnome dev",
-    "build": "bun run --filter app build"
+    "build:app": "bun run --filter app build",
+    "build:gnome": "bun run --filter gnome build",
+    "build": "bun run build:app && bun run build:gnome"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -22,8 +22,6 @@
     "lint-staged": "^15.0.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,css}": [
-      "biome check --write --no-errors-on-unmatched"
-    ]
+    "*.{js,jsx,ts,tsx,json,css}": ["biome check --write --no-errors-on-unmatched"]
   }
 }

@@ -145,7 +145,6 @@ export function getLanguageInstruction(): string {
       return 'Always respond in French.';
     case 'en':
       return 'Always respond in English.';
-    case 'auto':
     default:
       return 'Respond in the same language the user is using. If unsure, respond in English.';
   }

@@ -1,4 +1,4 @@
-import { Composio, ComposioToolSet, type ActionExecuteResponse } from 'composio-core';
+import { type ActionExecuteResponse, Composio, ComposioToolSet } from 'composio-core';
 
 export type RawActionData = Awaited<ReturnType<ComposioToolSet['getToolsSchema']>>[number];
 
@@ -7,126 +7,126 @@ export type RawActionData = Awaited<ReturnType<ComposioToolSet['getToolsSchema']
  * Handles listing available tools and executing them
  */
 class ComposioService {
-	private toolset: ComposioToolSet | null = null;
-	private composio: Composio | null = null;
+  private toolset: ComposioToolSet | null = null;
+  private composio: Composio | null = null;
 
-	private getToolSet(): ComposioToolSet {
-		if (!this.toolset) {
-			const apiKey = process.env.COMPOSIO_API_KEY;
-			if (!apiKey) {
-				throw new Error('COMPOSIO_API_KEY is not set');
-			}
+  private getToolSet(): ComposioToolSet {
+    if (!this.toolset) {
+      const apiKey = process.env.COMPOSIO_API_KEY;
+      if (!apiKey) {
+        throw new Error('COMPOSIO_API_KEY is not set');
+      }
 
-			this.toolset = new ComposioToolSet({
-				apiKey,
-				entityId: 'default',
-			});
-		}
-		return this.toolset;
-	}
+      this.toolset = new ComposioToolSet({
+        apiKey,
+        entityId: 'default',
+      });
+    }
+    return this.toolset;
+  }
 
-	private getClient(): Composio {
-		if (!this.composio) {
-			const apiKey = process.env.COMPOSIO_API_KEY;
-			if (!apiKey) {
-				throw new Error('COMPOSIO_API_KEY is not set');
-			}
+  private getClient(): Composio {
+    if (!this.composio) {
+      const apiKey = process.env.COMPOSIO_API_KEY;
+      if (!apiKey) {
+        throw new Error('COMPOSIO_API_KEY is not set');
+      }
 
-			this.composio = new Composio({ apiKey });
-		}
-		return this.composio;
-	}
+      this.composio = new Composio({ apiKey });
+    }
+    return this.composio;
+  }
 
-	/**
-	 * Get tools only from connected apps for the user
-	 */
-	async getTools(entityId = 'default'): Promise<RawActionData[]> {
-		// First, get connected apps for this entity
-		const connections = await this.listConnections(entityId);
+  /**
+   * Get tools only from connected apps for the user
+   */
+  async getTools(entityId = 'default'): Promise<RawActionData[]> {
+    // First, get connected apps for this entity
+    const connections = await this.listConnections(entityId);
 
-		if (connections.length === 0) {
-			return [];
-		}
+    if (connections.length === 0) {
+      return [];
+    }
 
-		// Extract unique app names from connections
-		const connectedApps = [...new Set(connections.map((conn) => conn.appName))];
+    // Extract unique app names from connections
+    const connectedApps = [...new Set(connections.map((conn) => conn.appName))];
 
-		// Get tools only for connected apps
-		const toolset = this.getToolSet();
-		const tools = await toolset.getToolsSchema({ apps: connectedApps }, entityId);
+    // Get tools only for connected apps
+    const toolset = this.getToolSet();
+    const tools = await toolset.getToolsSchema({ apps: connectedApps }, entityId);
 
-		return tools;
-	}
+    return tools;
+  }
 
-	/**
-	 * Get tools for specific apps only
-	 */
-	async getToolsForApps(apps: string[], entityId = 'default'): Promise<RawActionData[]> {
-		const toolset = this.getToolSet();
+  /**
+   * Get tools for specific apps only
+   */
+  async getToolsForApps(apps: string[], entityId = 'default'): Promise<RawActionData[]> {
+    const toolset = this.getToolSet();
 
-		const tools = await toolset.getToolsSchema({ apps }, entityId);
-		return tools;
-	}
+    const tools = await toolset.getToolsSchema({ apps }, entityId);
+    return tools;
+  }
 
-	/**
-	 * Execute a tool/action with given parameters
-	 */
-	async executeTool(
-		action: string,
-		params: Record<string, unknown>,
-		entityId = 'default',
-	): Promise<ActionExecuteResponse> {
-		const toolset = this.getToolSet();
+  /**
+   * Execute a tool/action with given parameters
+   */
+  async executeTool(
+    action: string,
+    params: Record<string, unknown>,
+    entityId = 'default',
+  ): Promise<ActionExecuteResponse> {
+    const toolset = this.getToolSet();
 
-		const result = await toolset.executeAction({
-			action,
-			params,
-			entityId,
-		});
+    const result = await toolset.executeAction({
+      action,
+      params,
+      entityId,
+    });
 
-		return result;
-	}
+    return result;
+  }
 
-	/**
-	 * List all connected accounts for an entity
-	 */
-	async listConnections(entityId = 'default') {
-		const client = this.getClient();
-		const entity = client.getEntity(entityId);
+  /**
+   * List all connected accounts for an entity
+   */
+  async listConnections(entityId = 'default') {
+    const client = this.getClient();
+    const entity = client.getEntity(entityId);
 
-		const connections = await entity.getConnections();
-		return connections;
-	}
+    const connections = await entity.getConnections();
+    return connections;
+  }
 
-	/**
-	 * Get connection status for an app
-	 */
-	async getConnectionStatus(appName: string, entityId = 'default') {
-		const client = this.getClient();
-		const entity = client.getEntity(entityId);
+  /**
+   * Get connection status for an app
+   */
+  async getConnectionStatus(appName: string, entityId = 'default') {
+    const client = this.getClient();
+    const entity = client.getEntity(entityId);
 
-		try {
-			const connection = await entity.getConnection({ appName });
-			return { connected: true, connection };
-		} catch {
-			return { connected: false, connection: null };
-		}
-	}
+    try {
+      const connection = await entity.getConnection({ appName });
+      return { connected: true, connection };
+    } catch {
+      return { connected: false, connection: null };
+    }
+  }
 
-	/**
-	 * Initiate OAuth connection for an app
-	 */
-	async initiateConnection(appName: string, redirectUrl: string, entityId = 'default') {
-		const client = this.getClient();
-		const entity = client.getEntity(entityId);
+  /**
+   * Initiate OAuth connection for an app
+   */
+  async initiateConnection(appName: string, redirectUrl: string, entityId = 'default') {
+    const client = this.getClient();
+    const entity = client.getEntity(entityId);
 
-		const connection = await entity.initiateConnection({
-			appName,
-			config: { redirectUrl },
-		});
+    const connection = await entity.initiateConnection({
+      appName,
+      config: { redirectUrl },
+    });
 
-		return connection;
-	}
+    return connection;
+  }
 }
 
 export const composioService = new ComposioService();

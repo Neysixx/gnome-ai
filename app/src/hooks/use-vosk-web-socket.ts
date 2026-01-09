@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VoskPartialResult, VoskResult, VoskWebSocketOptions } from '@/types/vosk';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface UseVoskWebSocketReturn {
   startRecognition: () => Promise<void>;
@@ -43,9 +43,9 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
     }
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
+      for (const track of streamRef.current.getTracks()) {
         track.stop();
-      });
+      }
       streamRef.current = null;
     }
 

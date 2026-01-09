@@ -7,17 +7,16 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!**/node_modules",
-      "!**/dist",
-      "!**/build",
-      "!**/.next",
-      "!**/coverage",
-      "!**/gnome/node_modules",
-      "!**/app/node_modules",
-      "!**/*.zip",
-      "!**/bun.lock"
+    "ignore": [
+      "**/node_modules",
+      "**/dist",
+      "**/build",
+      "**/.next",
+      "**/coverage",
+      "**/gnome/node_modules",
+      "**/app/node_modules",
+      "**/*.zip",
+      "**/bun.lock"
     ]
   },
   "formatter": {
@@ -38,11 +37,7 @@
       "semicolons": "always"
     }
   },
-  "assist": {
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
+  "organizeImports": {
+    "enabled": true
   }
 }

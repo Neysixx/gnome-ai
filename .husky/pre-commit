@@ -1,1 +1,2 @@
-bun run lint-staged
+echo "🔍 Formatting code..."
+bun run lint:fix

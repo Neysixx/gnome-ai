@@ -1,7 +1,7 @@
 // docker.ts
 
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { APP_NAME, COMPOSE_URL } from '../constants.js';
 
@@ -59,15 +59,17 @@ export function startDockerContainers(callback?: (success: boolean) => void): vo
         console.log('[AI] Docker containers started successfully');
         Main.notify('AI Assistant', 'Started Docker containers');
         callback?.(true);
-      } catch (e: any) {
-        console.error(`[AI] Failed to start containers: ${e.message}`);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        console.error(`[AI] Failed to start containers: ${error.message}`);
         Main.notify('AI Assistant', 'Failed to start containers');
         callback?.(false);
       }
     });
-  } catch (e: any) {
-    console.error(`[AI] Failed to spawn docker compose: ${e.message}`);
-    Main.notify('AI Assistant', `Erreur: ${e.message}`);
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    console.error(`[AI] Failed to spawn docker compose: ${error.message}`);
+    Main.notify('AI Assistant', `Erreur: ${error.message}`);
     callback?.(false);
   }
 }
@@ -79,8 +81,9 @@ export function stopDockerContainers(): void {
   try {
     GLib.spawn_command_line_async(`docker compose -f ${composePath} down`);
     console.log('[AI] Stopped Docker containers');
-  } catch (e: any) {
-    console.error(`[AI] Failed to stop containers: ${e.message}`);
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    console.error(`[AI] Failed to stop containers: ${error.message}`);
   }
 }
 
@@ -110,8 +113,9 @@ export function downloadDockerCompose(callback?: (success: boolean) => void): vo
         console.log(`[AI] Downloaded docker-compose.yml to ${destPath}`);
         Main.notify('AI Assistant', 'Downloaded docker-compose.yml');
         callback?.(true);
-      } catch (e: any) {
-        console.error(`[AI] Download failed: ${e.message}`);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        console.error(`[AI] Download failed: ${error.message}`);
         Main.notify('AI Assistant', 'Failed to download docker-compose.yml');
         callback?.(false);
       }
