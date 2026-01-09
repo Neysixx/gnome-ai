@@ -1,15 +1,15 @@
-import {
-  streamText,
-  convertToModelMessages,
-  stepCountIs,
-  dynamicTool,
-  jsonSchema,
-  type ToolSet,
-} from 'ai';
 import type { JSONSchema7 } from '@ai-sdk/provider';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { composioService, type RawActionData } from './composio.service';
+import {
+  type ToolSet,
+  convertToModelMessages,
+  dynamicTool,
+  jsonSchema,
+  stepCountIs,
+  streamText,
+} from 'ai';
 import { getConfigValue, getLanguageInstruction } from '../lib/config';
+import { type RawActionData, composioService } from './composio.service';
 
 /**
  * Build the system prompt with language configuration

@@ -1,15 +1,15 @@
-import GObject from 'gi://GObject';
-import St from 'gi://St';
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import St from 'gi://St';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 export const Indicator = GObject.registerClass(
   class Indicator extends St.Bin {
     private _proc: Gio.Subprocess | null = null;
-    private _extensionPath: string = '';
+    private _extensionPath = '';
 
     _init() {
       super._init({
@@ -37,7 +37,7 @@ export const Indicator = GObject.registerClass(
       this.set_child(icon);
 
       // Handle click events
-      this.connect('button-press-event', (_actor: any, event: any) => {
+      this.connect('button-press-event', (_actor: unknown, _event: Clutter.Event) => {
         this._toggleClient();
         return Clutter.EVENT_STOP;
       });
@@ -110,16 +110,20 @@ export const Indicator = GObject.registerClass(
             if (_proc) {
               _proc.wait_check_finish(res);
             }
-          } catch (e: any) {
-            if (e.code !== Gio.IOErrorEnum.CANCELLED) {
-              console.log(`[AI] Process finished (Code: ${e.code}, Message: ${e.message}).`);
+          } catch (e: unknown) {
+            const error = e as { code?: number; message?: string };
+            if (error.code !== Gio.IOErrorEnum.CANCELLED) {
+              console.log(
+                `[AI] Process finished (Code: ${error.code}, Message: ${error.message}).`,
+              );
             }
           }
           this._proc = null;
         });
-      } catch (e: any) {
-        console.error(`[AI] Launch failed: ${e.message}`);
-        console.error(`[AI ERROR] Stack trace: ${e.stack}`);
+      } catch (e: unknown) {
+        const error = e as { message?: string; stack?: string };
+        console.error(`[AI] Launch failed: ${error.message || 'unknown error'}`);
+        console.error(`[AI ERROR] Stack trace: ${error.stack || 'no stack trace'}`);
         this._proc = null;
       }
     }
@@ -134,9 +138,10 @@ export const Indicator = GObject.registerClass(
             // Continue reading the next line
             this._readStream(stream, prefix);
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           // End of stream or error
-          console.log(`${prefix} Stream error or end: ${e.message || 'unknown'}`);
+          const error = e as { message?: string };
+          console.log(`${prefix} Stream error or end: ${error.message || 'unknown'}`);
         }
       });
     }
@@ -158,21 +163,22 @@ export const Indicator = GObject.registerClass(
             if (_proc) {
               _proc.wait_check_finish(res);
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             // Process ended (maybe closed by user or crashed)
-            if (e.code !== Gio.IOErrorEnum.CANCELLED) {
-              console.log(`[AI Assistant] Client process exited (Code: ${e.code})`);
+            const error = e as { code?: number };
+            if (error.code !== Gio.IOErrorEnum.CANCELLED) {
+              console.log(`[AI Assistant] Client process exited (Code: ${error.code})`);
             }
           }
 
           // Clear the process reference
-          // @ts-ignore - TypeScript can't track that _proc is set in the closure
           this._proc = null;
         });
-      } catch (error: any) {
-        console.error(`[AI Assistant] Failed to launch client: ${error.message}`);
+      } catch (error: unknown) {
+        const err = error as { message?: string; stack?: string };
+        console.error(`[AI Assistant] Failed to launch client: ${err.message || 'unknown error'}`);
         console.error(`[AI Assistant] Path attempted: ${clientPath}`);
-        console.error(`[AI ERROR] Stack trace: ${error.stack}`);
+        console.error(`[AI ERROR] Stack trace: ${err.stack || 'no stack trace'}`);
         this._proc = null;
       }
     }

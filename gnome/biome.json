@@ -4,6 +4,6 @@
     "globals": ["imports", "log", "print", "global", "ARGV", "_", "C_", "N_", "ngettext"]
   },
   "files": {
-    "include": ["!**/node_modules", "!**/dist", "!**/*.zip"]
+    "ignore": ["node_modules", "dist", "*.zip"]
   }
 }

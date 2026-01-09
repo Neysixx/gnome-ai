@@ -1,4 +1,4 @@
-import { Composio, ComposioToolSet, type ActionExecuteResponse } from 'composio-core';
+import { type ActionExecuteResponse, Composio, ComposioToolSet } from 'composio-core';
 
 export type RawActionData = Awaited<ReturnType<ComposioToolSet['getToolsSchema']>>[number];
 

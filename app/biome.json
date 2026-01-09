@@ -1,7 +1,7 @@
 {
   "extends": ["../biome.json"],
   "files": {
-    "include": ["!**/.next", "!**/node_modules"]
+    "ignore": [".next", "node_modules"]
   },
   "linter": {
     "rules": {

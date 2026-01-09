@@ -1,6 +1,6 @@
-import Client from './client';
-import type { AppConfig } from '@/types/config';
 import { getConfig } from '@/lib/config';
+import type { AppConfig } from '@/types/config';
+import Client from './client';
 
 async function Page() {
   const config = getConfig();
