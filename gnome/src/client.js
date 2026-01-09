@@ -4,13 +4,13 @@ import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk?version=4.0';
 import WebKit from 'gi://WebKit?version=6.0';
 
-// Debug visible dans journalctl
-print('[AI CLIENT] Démarrage du script client...');
+// Debug visible in journalctl
+print('[AI CLIENT] Starting client script...');
 
 const APP_URL = 'http://localhost:9999';
 const APP_ID = 'com.neysixx.gnome_ai_assistant.client';
 
-// On laisse Gtk.Application gérer l'init
+// Let Gtk.Application handle the init
 const app = new Gtk.Application({
   application_id: APP_ID,
   flags: 0, // Gio.ApplicationFlags.FLAGS_NONE
@@ -75,7 +75,7 @@ app.connect('activate', () => {
     webView.load_uri(APP_URL);
     window.set_child(webView);
   } catch (e) {
-    print(`[AI CLIENT] Erreur WebKit: ${e.message}`);
+    print(`[AI CLIENT] WebKit error: ${e.message}`);
     // Fallback to non-persistent if something fails
     try {
       const webView = new WebKit.WebView();
@@ -105,10 +105,10 @@ app.connect('activate', () => {
   window.present();
 });
 
-// Capture globale des erreurs pour comprendre pourquoi ça plante
+// Global error capture to understand why it crashes
 try {
   app.run([imports.system.programInvocationName].concat(ARGV));
 } catch (e) {
-  print(`[AI CLIENT CRASH] : ${e.message}`);
+  print(`[AI CLIENT CRASH]: ${e.message}`);
   print(e.stack);
 }
