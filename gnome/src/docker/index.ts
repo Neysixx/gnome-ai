@@ -112,7 +112,9 @@ export async function downloadDockerCompose(callback?: (success: boolean) => voi
       callback?.(false);
       return;
     }
-    const asset = data.assets.find((asset: { name: string }) => asset.name === 'docker-compose.yml');
+    const asset = data.assets.find(
+      (asset: { name: string }) => asset.name === 'docker-compose.yml',
+    );
     if (!asset) {
       console.error('[AI] Failed to find docker-compose.yml asset');
       callback?.(false);

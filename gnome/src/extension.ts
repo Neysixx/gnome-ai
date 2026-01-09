@@ -50,10 +50,7 @@ export const Indicator = GObject.registerClass(
       console.log('[AI] Initializing services...');
 
       if (!Docker.isDockerInstalled()) {
-        Main.notify(
-          'AI Assistant',
-          "Docker not installed. Please install Docker to continue.",
-        );
+        Main.notify('AI Assistant', 'Docker not installed. Please install Docker to continue.');
         this._updateIcon(false);
         return;
       }
@@ -166,9 +163,7 @@ export const Indicator = GObject.registerClass(
           } catch (e: unknown) {
             const error = e as { code?: number; message?: string };
             if (error.code !== Gio.IOErrorEnum.CANCELLED) {
-              console.log(
-                `[AI] Client exited (Code: ${error.code}, Message: ${error.message}).`,
-              );
+              console.log(`[AI] Client exited (Code: ${error.code}, Message: ${error.message}).`);
             }
           }
           this._proc = null;
