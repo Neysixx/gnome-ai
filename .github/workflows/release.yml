@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
   packages: write
 
 jobs:
@@ -17,10 +18,15 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           release-type: simple
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push-docker:
     needs: release-please
