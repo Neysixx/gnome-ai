@@ -10,8 +10,8 @@ services:
       - ./config.json:/app/config.json:rw
     environment:
       # Secrets from .env file at monorepo root
-      - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
-      - COMPOSIO_API_KEY=\${COMPOSIO_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
 
       # Application Configuration
       - NODE_ENV=production
