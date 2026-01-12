@@ -22,7 +22,11 @@ export class GithubService {
     return `${this._baseUrl}/${fileName}`;
   }
 
-  public async downloadFile(fileName: string, destPath: string, overwrite = false): Promise<boolean> {
+  public async downloadFile(
+    fileName: string,
+    destPath: string,
+    overwrite = false,
+  ): Promise<boolean> {
     if (!overwrite && this._fileService.isRegularFile(destPath)) {
       console.log(`[AI] File already exists: ${destPath}`);
       return true;
@@ -39,4 +43,3 @@ export class GithubService {
     return this.downloadFile(fileName, destPath, overwrite);
   }
 }
-
