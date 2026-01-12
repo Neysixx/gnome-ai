@@ -5,13 +5,13 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as Docker from './docker/index.js';
+import { SetupService, type SetupStatus } from './services/index.js';
 
 export const Indicator = GObject.registerClass(
   class Indicator extends St.Bin {
     private _proc: Gio.Subprocess | null = null;
     private _extensionPath = '';
-    private _servicesReady = false;
+    private _setupService: SetupService | null = null;
 
     _init() {
       super._init({
@@ -29,6 +29,7 @@ export const Indicator = GObject.registerClass(
       }
 
       this._extensionPath = extensionPath;
+      this._setupService = SetupService.getInstance();
       console.log(`[AI] Indicator path set to: ${this._extensionPath}`);
 
       const icon = new St.Icon({
@@ -38,8 +39,20 @@ export const Indicator = GObject.registerClass(
 
       this.set_child(icon);
 
-      this.connect('button-press-event', (_actor: unknown, _event: Clutter.Event) => {
-        this._toggleClient();
+      this.connect('button-press-event', (_actor: unknown, event: Clutter.Event) => {
+        const button = event.get_button();
+        console.log(`[AI] Button pressed: ${button}`);
+        // Left click: toggle client
+        if (button === 1) {
+          this._toggleClient();
+          return Clutter.EVENT_STOP;
+        }
+        // Right click: open preferences
+        if (button === 3) {
+          console.log('[AI] Opening preferences...');
+          this._openPreferences();
+          return Clutter.EVENT_STOP;
+        }
         return Clutter.EVENT_STOP;
       });
 
@@ -49,40 +62,18 @@ export const Indicator = GObject.registerClass(
     async _initializeServices() {
       console.log('[AI] Initializing services...');
 
-      if (!Docker.isDockerInstalled()) {
-        Main.notify('AI Assistant', 'Docker not installed. Please install Docker to continue.');
-        this._updateIcon(false);
+      if (!this._setupService) {
+        console.error('[AI ERROR] SetupService not initialized');
         return;
       }
 
-      if (Docker.areServicesRunning()) {
-        console.log('[AI] Services already running');
-        this._servicesReady = true;
-        this._updateIcon(true);
-        return;
-      }
-
-      Docker.ensureAppDirExists();
-
-      Main.notify('AI Assistant', 'Configuring services...');
-
-      await Docker.downloadDockerCompose(this._extensionPath, async (downloadSuccess) => {
-        if (downloadSuccess) {
-          Docker.startDockerContainers(async (startSuccess) => {
-            this._servicesReady = startSuccess;
-            this._updateIcon(startSuccess);
-
-            if (startSuccess) {
-              GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
-                Main.notify('AI Assistant', 'Ready to work! 🚀');
-                return GLib.SOURCE_REMOVE;
-              });
-            }
-          });
-        } else {
-          this._updateIcon(false);
-        }
+      const result = await this._setupService.initialize((status: SetupStatus) => {
+        this._updateIcon(status === 'ready');
       });
+
+      if (!result.success) {
+        console.error(`[AI] Setup failed: ${result.message}`);
+      }
     }
 
     _updateIcon(ready: boolean) {
@@ -93,7 +84,7 @@ export const Indicator = GObject.registerClass(
     }
 
     _toggleClient() {
-      if (!this._servicesReady) {
+      if (!this._setupService?.isReady) {
         Main.notify('AI Assistant', 'Services are starting, please wait...');
         return;
       }
@@ -198,6 +189,56 @@ export const Indicator = GObject.registerClass(
       }
     }
 
+    _openPreferences() {
+      if (!this._extensionPath) {
+        console.error('[AI ERROR] Extension path is not set. Cannot open preferences.');
+        return;
+      }
+      const prefsPath = GLib.build_filenamev([this._extensionPath, 'prefs.js']);
+
+      const file = Gio.File.new_for_path(prefsPath);
+      const fileExists = file.query_exists(null);
+
+      if (!fileExists) {
+        console.error(`[AI ERROR] Preferences file not found at: ${prefsPath}`);
+        Main.notify('AI Assistant', 'Preferences file not found');
+        return;
+      }
+
+      try {
+        let env = GLib.get_environ();
+
+        env = GLib.environ_setenv(env, 'WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS', '1', true);
+
+        const display = GLib.getenv('DISPLAY') || ':0';
+        env = GLib.environ_setenv(env, 'DISPLAY', display, true);
+
+        const wayland = GLib.getenv('WAYLAND_DISPLAY');
+        if (wayland) {
+          env = GLib.environ_setenv(env, 'WAYLAND_DISPLAY', wayland, true);
+        }
+
+        const launcher = new Gio.SubprocessLauncher({
+          flags: Gio.SubprocessFlags.STDERR_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+        });
+        launcher.set_environ(env);
+
+        console.log(`[AI] Opening preferences: ${prefsPath}`);
+
+        const proc = launcher.spawnv(['/usr/bin/gjs', '-m', prefsPath]);
+
+        const stderrPipe = proc.get_stderr_pipe();
+        if (stderrPipe) {
+          const stderrStream = new Gio.DataInputStream({ base_stream: stderrPipe });
+          this._readStream(stderrStream, '[PREFS ERROR]');
+        }
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        console.error(`[AI] Failed to open preferences: ${error.message}`);
+        Main.notify('AI Assistant', 'Failed to open preferences');
+      }
+    }
+
     destroy() {
       this._closeClient();
       super.destroy();
@@ -224,6 +265,6 @@ export default class AiAssistant extends Extension {
       this._indicator = null;
     }
 
-    Docker.stopDockerContainers();
+    SetupService.getInstance().shutdown();
   }
 }
