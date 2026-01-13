@@ -26,12 +26,13 @@ function getConfigPaths() {
   };
 }
 
-const { userConfig: USER_CONFIG_PATH } = getConfigPaths();
-
 /**
  * Read and merge configuration from default and user config files
+ * Path is resolved dynamically to avoid caching issues
  */
 export function getConfig(): AppConfig {
+  const { userConfig: userConfigPath } = getConfigPaths();
+
   let config: AppConfig = {
     llm: {
       model: 'xiaomi/mimo-v2-flash:free',
@@ -42,8 +43,9 @@ export function getConfig(): AppConfig {
 
   // Load user config (overrides)
   try {
-    if (fs.existsSync(USER_CONFIG_PATH)) {
-      const userConfig = JSON.parse(fs.readFileSync(USER_CONFIG_PATH, 'utf-8'));
+    if (fs.existsSync(userConfigPath)) {
+      // Clear require cache to ensure fresh read
+      const userConfig = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'));
       config = deepMerge(config, userConfig);
     }
   } catch (error) {
@@ -64,11 +66,12 @@ export function getConfigValue<K extends keyof AppConfig>(key: K): AppConfig[K] 
  * Update user configuration (creates config.json if doesn't exist)
  */
 export function updateConfig(updates: Partial<AppConfig>): AppConfig {
+  const { userConfig: userConfigPath } = getConfigPaths();
   const currentConfig = getConfig();
   const newConfig = deepMerge(currentConfig, updates);
 
   try {
-    fs.writeFileSync(USER_CONFIG_PATH, JSON.stringify(newConfig, null, 2), 'utf-8');
+    fs.writeFileSync(userConfigPath, JSON.stringify(newConfig, null, 2), 'utf-8');
   } catch (error) {
     console.error('[Config] Failed to save user config:', error);
     throw new Error('Failed to save configuration');
@@ -94,9 +97,10 @@ export function updateConfigSection<K extends keyof AppConfig>(
  * Reset config to defaults (deletes user config file)
  */
 export function resetConfig(): void {
+  const { userConfig: userConfigPath } = getConfigPaths();
   try {
-    if (fs.existsSync(USER_CONFIG_PATH)) {
-      fs.unlinkSync(USER_CONFIG_PATH);
+    if (fs.existsSync(userConfigPath)) {
+      fs.unlinkSync(userConfigPath);
     }
   } catch (error) {
     console.error('[Config] Failed to reset config:', error);
