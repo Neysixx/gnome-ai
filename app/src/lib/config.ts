@@ -8,7 +8,8 @@ import type { AppConfig } from '@/types/config';
  * - In development: config files are at monorepo root (one level up from app/)
  */
 function getConfigPaths() {
-  const isDocker = process.env.NODE_ENV === 'production' || fs.existsSync('/app/config.default.json');
+  const isDocker =
+    process.env.NODE_ENV === 'production' || fs.existsSync('/app/config.default.json');
 
   if (isDocker) {
     return {
