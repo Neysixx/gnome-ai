@@ -37,12 +37,17 @@ export function SettingsDialog({ config }: { config: AppConfig }) {
   const [modelValue, setModelValue] = useState(config?.llm.model || '');
   const queryClient = useQueryClient();
 
-  // Reset preprompt value when config changes or dialog opens
   useEffect(() => {
     if (config?.llm.preprompt !== undefined) {
       setPrepromptValue(config.llm.preprompt || '');
     }
   }, [config?.llm.preprompt]);
+
+  useEffect(() => {
+    if (config?.llm.model !== undefined) {
+      setModelValue(config.llm.model || '');
+    }
+  }, [config?.llm.model]);
 
   const { mutate: updateConfigMutation, isPending: isUpdatingConfig } = useMutation<
     AppConfig,
