@@ -3,7 +3,7 @@
   "release-type": "simple",
   "include-v-in-tag": true,
   "separate-pull-requests": false,
-  "extra-files": [],
+  "extra-files": ["docker-compose.yml"],
   "pull-request-title-pattern": "chore: release v${version}",
   "group-pull-request-title-pattern": "chore: release v${version}",
   "packages": {
