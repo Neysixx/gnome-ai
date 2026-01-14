@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/Neysixx/gnome-ai/compare/v1.0.0...v1.0.1) (2026-01-11)
+
+
+### Bug Fixes
+
+* **docker:** remove escape characters from environment variable references in docker-compose.yml ([3fe6065](https://github.com/Neysixx/gnome-ai/commit/3fe60652e321f88fde300bf7d5d580c2af9d9209))
+
 ## 1.0.0 (2026-01-09)
 
 
