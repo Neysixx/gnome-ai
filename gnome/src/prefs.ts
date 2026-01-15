@@ -2,26 +2,16 @@ import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
+import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import { FileService } from './services/file.service.js';
 
-export function openPreferences(): void {
-  const fileService = FileService.getInstance();
-  const appDir = fileService.appDir;
-  const envPath = GLib.build_filenamev([appDir, '.env']);
+export default class AiAssistantPreferences extends ExtensionPreferences {
+  fillPreferencesWindow(window: Adw.PreferencesWindow): void {
+    const fileService = FileService.getInstance();
+    const appDir = fileService.appDir;
+    const envPath = GLib.build_filenamev([appDir, '.env']);
 
-  // Create preferences window
-  const app = new Adw.Application({
-    application_id: 'com.neysixx.gnome_ai_assistant.prefs',
-    flags: Gio.ApplicationFlags.FLAGS_NONE,
-  });
-
-  app.connect('activate', () => {
-    const window = new Adw.PreferencesWindow({
-      application: app,
-      title: 'AI Assistant Settings',
-      width_request: 600,
-      height_request: 500,
-    });
+    window.set_default_size(600, 500);
 
     // API Keys page
     const apiKeysPage = new Adw.PreferencesPage({
@@ -47,9 +37,7 @@ export function openPreferences(): void {
         for (const line of content.split('\n')) {
           const trimmed = line.trim();
           if (trimmed.startsWith('OPENROUTER_API_KEY=')) {
-            openrouterKey = trimmed
-              .substring('OPENROUTER_API_KEY='.length)
-              .replace(/^["']|["']$/g, '');
+            openrouterKey = trimmed.substring('OPENROUTER_API_KEY='.length).replace(/^["']|["']$/g, '');
           } else if (trimmed.startsWith('COMPOSIO_API_KEY=')) {
             composioKey = trimmed.substring('COMPOSIO_API_KEY='.length).replace(/^["']|["']$/g, '');
           }
@@ -60,20 +48,16 @@ export function openPreferences(): void {
     }
 
     // OpenRouter API Key
-    const openrouterRow = new Adw.EntryRow({
+    const openrouterRow = new Adw.PasswordEntryRow({
       title: 'OpenRouter API Key',
       text: openrouterKey,
-      show_apply_button: false,
     });
-    openrouterRow.set_placeholder_text('sk-or-v1-...');
 
     // Composio API Key
-    const composioRow = new Adw.EntryRow({
+    const composioRow = new Adw.PasswordEntryRow({
       title: 'Composio API Key',
       text: composioKey,
-      show_apply_button: false,
     });
-    composioRow.set_placeholder_text('Enter your Composio API key');
 
     apiKeysGroup.add(openrouterRow);
     apiKeysGroup.add(composioRow);
@@ -92,13 +76,12 @@ export function openPreferences(): void {
 
       // Validate that at least OpenRouter key is provided
       if (!newOpenrouterKey) {
-        const dialog = new Adw.MessageDialog({
+        const dialog = new Adw.AlertDialog({
           heading: 'OpenRouter API Key Required',
           body: 'Please enter your OpenRouter API key to use the AI Assistant.',
-          transient_for: window,
         });
         dialog.add_response('ok', 'OK');
-        dialog.present();
+        dialog.present(window);
         return;
       }
 
@@ -111,24 +94,22 @@ export function openPreferences(): void {
         const file = Gio.File.new_for_path(envPath);
         file.replace_contents(contents, null, false, Gio.FileCreateFlags.NONE, null);
 
-        const successDialog = new Adw.MessageDialog({
+        const successDialog = new Adw.AlertDialog({
           heading: 'Settings Saved',
           body: 'Your API keys have been saved. Please restart the Docker containers for changes to take effect.',
-          transient_for: window,
         });
         successDialog.add_response('ok', 'OK');
-        successDialog.present();
+        successDialog.present(window);
 
         console.log('[AI] API keys saved to .env file');
       } catch (e) {
         console.error(`[AI] Failed to save .env file: ${e}`);
-        const errorDialog = new Adw.MessageDialog({
+        const errorDialog = new Adw.AlertDialog({
           heading: 'Error Saving Settings',
           body: `Failed to save settings: ${e}`,
-          transient_for: window,
         });
         errorDialog.add_response('ok', 'OK');
-        errorDialog.present();
+        errorDialog.present(window);
       }
     });
 
@@ -139,8 +120,5 @@ export function openPreferences(): void {
     apiKeysPage.add(saveGroup);
 
     window.add(apiKeysPage);
-    window.present();
-  });
-
-  app.run([]);
+  }
 }

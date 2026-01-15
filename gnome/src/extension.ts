@@ -12,6 +12,7 @@ export const Indicator = GObject.registerClass(
     private _proc: Gio.Subprocess | null = null;
     private _extensionPath = '';
     private _setupService: SetupService | null = null;
+    private _extension: Extension | null = null;
 
     _init() {
       super._init({
@@ -22,13 +23,14 @@ export const Indicator = GObject.registerClass(
       });
     }
 
-    async setExtensionPath(extensionPath: string) {
-      if (!extensionPath) {
+    async setExtension(extension: Extension) {
+      if (!extension.path) {
         console.error('[AI ERROR] Extension path is required');
         throw new Error('Extension path is required');
       }
 
-      this._extensionPath = extensionPath;
+      this._extension = extension;
+      this._extensionPath = extension.path;
       this._setupService = SetupService.getInstance();
       console.log(`[AI] Indicator path set to: ${this._extensionPath}`);
 
@@ -190,48 +192,14 @@ export const Indicator = GObject.registerClass(
     }
 
     _openPreferences() {
-      if (!this._extensionPath) {
-        console.error('[AI ERROR] Extension path is not set. Cannot open preferences.');
-        return;
-      }
-      const prefsPath = GLib.build_filenamev([this._extensionPath, 'prefs.js']);
-
-      const file = Gio.File.new_for_path(prefsPath);
-      const fileExists = file.query_exists(null);
-
-      if (!fileExists) {
-        console.error(`[AI ERROR] Preferences file not found at: ${prefsPath}`);
-        Main.notify('AI Assistant', 'Preferences file not found');
+      if (!this._extension) {
+        console.error('[AI ERROR] Extension not set. Cannot open preferences.');
+        Main.notify('AI Assistant', 'Extension not initialized');
         return;
       }
 
       try {
-        let env = GLib.get_environ();
-
-        env = GLib.environ_setenv(env, 'WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS', '1', true);
-
-        const display = GLib.getenv('DISPLAY') || ':0';
-        env = GLib.environ_setenv(env, 'DISPLAY', display, true);
-
-        const wayland = GLib.getenv('WAYLAND_DISPLAY');
-        if (wayland) {
-          env = GLib.environ_setenv(env, 'WAYLAND_DISPLAY', wayland, true);
-        }
-
-        const launcher = new Gio.SubprocessLauncher({
-          flags: Gio.SubprocessFlags.STDERR_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
-        });
-        launcher.set_environ(env);
-
-        console.log(`[AI] Opening preferences: ${prefsPath}`);
-
-        const proc = launcher.spawnv(['/usr/bin/gjs', '-m', prefsPath]);
-
-        const stderrPipe = proc.get_stderr_pipe();
-        if (stderrPipe) {
-          const stderrStream = new Gio.DataInputStream({ base_stream: stderrPipe });
-          this._readStream(stderrStream, '[PREFS ERROR]');
-        }
+        this._extension.openPreferences();
       } catch (e: unknown) {
         const error = e as { message?: string };
         console.error(`[AI] Failed to open preferences: ${error.message}`);
@@ -252,7 +220,7 @@ export default class AiAssistant extends Extension {
   async enable() {
     // @ts-ignore
     this._indicator = new Indicator();
-    await this._indicator.setExtensionPath(this.path);
+    await this._indicator.setExtension(this);
     // @ts-ignore
     Main.panel._rightBox.insert_child_at_index(this._indicator, 0);
   }
