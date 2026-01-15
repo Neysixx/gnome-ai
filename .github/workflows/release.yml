@@ -17,6 +17,7 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.extract-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,6 +28,15 @@ jobs:
         with:
           release-type: simple
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version number
+        id: extract-version
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          VERSION="${{ steps.release.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
 
   build-and-push-docker:
     needs: release-please
@@ -67,53 +77,6 @@ jobs:
           cd gnome
           bun run build
 
-      # Put the new version of the docker-compose.yml
-      - name: Generate docker-compose.yml
-        run: |
-          cat > docker-compose.yml << EOF
-          services:
-              app:
-                image: neysixx/gnome-ai-assistant-nextjs:${{ needs.release-please.outputs.tag_name }}
-                restart: unless-stopped
-                ports:
-                  - "9999:9999"
-                volumes:
-                  # Mount config files (read-write for user overrides)
-                  - ./config.default.json:/app/config.default.json:ro
-                  - ./config.json:/app/config.json:rw
-                environment:
-                  # Secrets from .env file at monorepo root
-                  - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
-                  - COMPOSIO_API_KEY=\${COMPOSIO_API_KEY}
-
-                  # Application Configuration
-                  - NODE_ENV=production
-                  - HOST=0.0.0.0
-                  - PORT=9999
-              speech-server-fr:
-                image: alphacep/kaldi-fr:latest
-                container_name: speech-server-fr
-                ports:
-                  - "2700:2700"
-                restart: unless-stopped
-                healthcheck:
-                  test: ["CMD", "curl", "-f", "http://localhost:2700"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 3
-              speech-server-en:
-                image: alphacep/kaldi-en:latest
-                container_name: speech-server-en
-                ports:
-                  - "2701:2701"
-                restart: unless-stopped
-                healthcheck:
-                  test: ["CMD", "curl", "-f", "http://localhost:2701"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 3
-          EOF
-
       # Upload release assets
       - name: Upload release assets
         env:
@@ -123,3 +86,36 @@ jobs:
             docker-compose.yml \
             gnome/gnome-ai-assistant@neysixx.shell-extension.zip \
             --clobber
+
+  update-docker-compose:
+    needs: [release-please, build-and-push-docker]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update docker-compose.yml version
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          echo "Updating docker-compose.yml to tag: $TAG"
+
+          sed -i "s|neysixx/gnome-ai-assistant-nextjs:[^[:space:]]*|neysixx/gnome-ai-assistant-nextjs:${TAG}|g" docker-compose.yml
+
+          echo "Changes made:"
+          git diff docker-compose.yml
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet docker-compose.yml; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add docker-compose.yml
+          git commit -m "chore: update nextjs image to ${{ needs.release-please.outputs.tag_name }} [skip ci]"
+          git push
