@@ -99,11 +99,11 @@ jobs:
 
       - name: Update docker-compose.yml version
         run: |
-          VERSION="${{ needs.release-please.outputs.version }}"
-          echo "Updating docker-compose.yml to version: $VERSION"
-          
-          sed -i "s|neysixx/gnome-ai-assistant-nextjs:[^[:space:]]*|neysixx/gnome-ai-assistant-nextjs:${VERSION}|g" docker-compose.yml
-          
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          echo "Updating docker-compose.yml to tag: $TAG"
+
+          sed -i "s|neysixx/gnome-ai-assistant-nextjs:[^[:space:]]*|neysixx/gnome-ai-assistant-nextjs:${TAG}|g" docker-compose.yml
+
           echo "Changes made:"
           git diff docker-compose.yml
 
@@ -111,12 +111,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
           if git diff --quiet docker-compose.yml; then
             echo "No changes to commit"
             exit 0
           fi
-          
+
           git add docker-compose.yml
-          git commit -m "chore: update nextjs image to version ${{ needs.release-please.outputs.version }} [skip ci]"
+          git commit -m "chore: update nextjs image to ${{ needs.release-please.outputs.tag_name }} [skip ci]"
           git push
