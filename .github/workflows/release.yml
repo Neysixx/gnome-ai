@@ -17,6 +17,7 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.extract-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,6 +28,15 @@ jobs:
         with:
           release-type: simple
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version number
+        id: extract-version
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          VERSION="${{ steps.release.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
 
   build-and-push-docker:
     needs: release-please
@@ -76,3 +86,37 @@ jobs:
             docker-compose.yml \
             gnome/gnome-ai-assistant@neysixx.shell-extension.zip \
             --clobber
+
+  update-docker-compose:
+    needs: [release-please, build-and-push-docker]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update docker-compose.yml version
+        run: |
+          VERSION="${{ needs.release-please.outputs.version }}"
+          echo "Updating docker-compose.yml to version: $VERSION"
+          
+          sed -i "s|neysixx/gnome-ai-assistant-nextjs:[^[:space:]]*|neysixx/gnome-ai-assistant-nextjs:${VERSION}|g" docker-compose.yml
+          
+          echo "Changes made:"
+          git diff docker-compose.yml
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet docker-compose.yml; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git add docker-compose.yml
+          git commit -m "chore: update nextjs image to version ${{ needs.release-please.outputs.version }} [skip ci]"
+          git push
