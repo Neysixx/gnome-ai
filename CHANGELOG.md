@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/Neysixx/gnome-ai/compare/v1.0.2...v1.0.3) (2026-01-15)
+
+
+### Bug Fixes
+
+* docker-compose app image version auto-update ([#8](https://github.com/Neysixx/gnome-ai/issues/8)) ([4fd4061](https://github.com/Neysixx/gnome-ai/commit/4fd40619d3cac4e308b4d6c39fcc39985f24ebde))
+
 ## [1.0.2](https://github.com/Neysixx/gnome-ai/compare/v1.0.1...v1.0.2) (2026-01-14)
 
 
