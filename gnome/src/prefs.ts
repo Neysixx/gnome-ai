@@ -142,5 +142,5 @@ export function openPreferences(): void {
     window.present();
   });
 
-  app.activate();
+  app.run([]);
 }
