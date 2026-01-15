@@ -37,7 +37,9 @@ export default class AiAssistantPreferences extends ExtensionPreferences {
         for (const line of content.split('\n')) {
           const trimmed = line.trim();
           if (trimmed.startsWith('OPENROUTER_API_KEY=')) {
-            openrouterKey = trimmed.substring('OPENROUTER_API_KEY='.length).replace(/^["']|["']$/g, '');
+            openrouterKey = trimmed
+              .substring('OPENROUTER_API_KEY='.length)
+              .replace(/^["']|["']$/g, '');
           } else if (trimmed.startsWith('COMPOSIO_API_KEY=')) {
             composioKey = trimmed.substring('COMPOSIO_API_KEY='.length).replace(/^["']|["']$/g, '');
           }
