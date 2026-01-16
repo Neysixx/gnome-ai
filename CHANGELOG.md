@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/Neysixx/gnome-ai/compare/v1.0.3...v1.0.4) (2026-01-16)
+
+
+### Bug Fixes
+
+* docker version ([#10](https://github.com/Neysixx/gnome-ai/issues/10)) ([97c591f](https://github.com/Neysixx/gnome-ai/commit/97c591f4d341ff182ee20a07298fcbe5435bad32))
+* update docker image tag format in docker-compose.yml to v1.0.3 ([#11](https://github.com/Neysixx/gnome-ai/issues/11)) ([e8ed16e](https://github.com/Neysixx/gnome-ai/commit/e8ed16e3db68f05aa0641be69689582cb85e669b))
+
 ## [1.0.3](https://github.com/Neysixx/gnome-ai/compare/v1.0.2...v1.0.3) (2026-01-15)
 
 
