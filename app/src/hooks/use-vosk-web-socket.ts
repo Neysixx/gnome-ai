@@ -12,7 +12,10 @@ export interface UseVoskWebSocketReturn {
 
 export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWebSocketReturn {
   const { config, onResult, onPartialResult, onError } = options;
-  const serverUrl = config?.language === 'fr' ? 'ws://localhost:2700' : 'ws://localhost:2701';
+
+  if (!config) {
+    throw new Error('Config is required');
+  }
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -24,6 +27,12 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverStatus, setServerStatus] = useState<boolean | null>(null);
+
+  const getConfigServerUrl = useCallback(() => {
+    const language = config?.llm?.language || 'auto';
+    const port = language === 'en' ? 2701 : 2700;
+    return `ws://localhost:${port}`;
+  }, [config]);
 
   const cleanup = useCallback(() => {
     if (processorRef.current) {
@@ -65,22 +74,25 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
     setIsConnecting(false);
   }, []);
 
-  const pingServer = () => {
-    const ws = new WebSocket(serverUrl);
+  const pingServer = useCallback(() => {
+    const url = getConfigServerUrl();
+    const ws = new WebSocket(url);
     ws.onopen = () => {
       setServerStatus(true);
+      ws.close();
     };
     ws.onerror = () => {
       setServerStatus(false);
     };
-  };
+    ws.onclose = () => {};
+  }, [getConfigServerUrl]);
 
   const startRecognition = useCallback(async () => {
     try {
       setIsConnecting(true);
       setError(null);
 
-      const ws = new WebSocket(serverUrl);
+      const ws = new WebSocket(getConfigServerUrl());
       wsRef.current = ws;
 
       ws.onopen = async () => {
@@ -179,7 +191,7 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
       setIsConnecting(false);
       cleanup();
     }
-  }, [serverUrl, onResult, onPartialResult, onError, cleanup]);
+  }, [getConfigServerUrl, onResult, onPartialResult, onError, cleanup]);
 
   const stopRecognition = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -199,10 +211,9 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
     };
   }, [cleanup]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: No deps needed
   useEffect(() => {
     pingServer();
-  }, []);
+  }, [pingServer]);
 
   return {
     startRecognition,
