@@ -84,7 +84,7 @@ export function useVoskWebSocket(options: VoskWebSocketOptions = {}): UseVoskWeb
     ws.onerror = () => {
       setServerStatus(false);
     };
-    ws.onclose = () => { };
+    ws.onclose = () => {};
   }, [getConfigServerUrl]);
 
   const startRecognition = useCallback(async () => {
