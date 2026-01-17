@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/Neysixx/gnome-ai/compare/v1.0.4...v1.0.5) (2026-01-17)
+
+
+### Bug Fixes
+
+* config refresh ([#13](https://github.com/Neysixx/gnome-ai/issues/13)) ([51e34a7](https://github.com/Neysixx/gnome-ai/commit/51e34a7ee5a450ed26dd443df7e4dd435fc464cd))
+
 ## [1.0.4](https://github.com/Neysixx/gnome-ai/compare/v1.0.3...v1.0.4) (2026-01-16)
 
 
