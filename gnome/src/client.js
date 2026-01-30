@@ -5,7 +5,7 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk?version=4.0';
 import WebKit from 'gi://WebKit?version=6.0';
 
-import { APP_URL, APP_HOST, APP_ID } from './constants.js';
+import { APP_HOST, APP_ID, APP_URL } from './constants.js';
 
 // Debug visible in journalctl
 print('[AI CLIENT] Starting client script...');
