@@ -187,7 +187,7 @@ export function SettingsDialog({ config }: { config: AppConfig }) {
                 value={prepromptValue}
                 onChange={(e) => setPrepromptValue(e.target.value)}
                 placeholder="e.g. Always be formal, or concise..."
-                className="min-h-[100px]"
+                className="min-h-[100px] max-h-[200px]"
                 disabled={isUpdatingConfig}
               />
               <p className="text-xs text-muted-foreground">
