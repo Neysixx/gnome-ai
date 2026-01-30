@@ -220,7 +220,10 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                 </Avatar>
 
                 <div
-                  className={cn('relative max-w-[85%] min-w-0 space-y-2', isUser ? 'ml-auto' : 'mr-auto')}
+                  className={cn(
+                    'relative max-w-[85%] min-w-0 space-y-2',
+                    isUser ? 'ml-auto' : 'mr-auto',
+                  )}
                 >
                   {/* Tool Calls */}
                   {toolParts.length > 0 && (
