@@ -1,7 +1,7 @@
 'use client';
 
+import { AgentOrb } from '@/components/agent-orb';
 import { SettingsDialog } from '@/components/settings-dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +19,7 @@ import {
   getToolName,
   isToolUIPart,
 } from 'ai';
-import { Loader2, Mic, MicOff, Send, Sparkles, Trash, Wrench } from 'lucide-react';
+import { Loader2, Mic, MicOff, Send, Trash, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -164,36 +164,50 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
     setUiError(null);
   };
 
+  // Compute Agent State
+  const agentState: 'idle' | 'thinking' | 'speaking' = useMemo(() => {
+    if (isLoading) return 'thinking';
+    // Potential future expansion for 'speaking' if TTS is added or streaming text is detected
+    return 'idle';
+  }, [isLoading]);
+
   return (
-    <div className="flex h-screen flex-col bg-background font-sans">
+    <div className="flex h-screen flex-col bg-background font-sans selection:bg-primary/30">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        {/* Subtle monochrome ambient light */}
+        <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px] opacity-20 dark:opacity-40" />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 px-6 py-3 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-tr from-primary/20 to-secondary/20 text-primary ring-1 ring-primary/10">
-            <Sparkles className="h-5 w-5" />
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-white/5 bg-background/60 px-6 py-4 backdrop-blur-xl transition-all duration-300">
+        <div className="flex items-center gap-4">
+          {/* Agent Orb Identity */}
+          <div className="relative h-10 w-10">
+            <AgentOrb state={agentState} className="h-10 w-10" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            AI Assistant
+          <h1 className="text-lg font-bold tracking-tight text-foreground transition-all duration-500">
+            {agentState === 'thinking' ? 'AI Thinking...' : 'AI Assistant'}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 p-1 backdrop-blur-md">
           <SettingsDialog config={config} />
           <ModeToggle />
         </div>
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1">
-        <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 md:px-6">
+      <ScrollArea className="relative z-10 flex-1">
+        <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:px-6">
           {messages.length === 0 && (
-            <div className="flex flex-1 flex-col items-center justify-center py-24 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/5 text-primary ring-1 ring-primary/20">
-                <Sparkles className="h-8 w-8" />
+            <div className="flex flex-1 flex-col items-center justify-center py-24 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+              <div className="relative mb-8 h-32 w-32">
+                <AgentOrb state="idle" className="h-32 w-32" />
               </div>
-              <h2 className="mb-3 text-3xl font-bold tracking-tight">How can I help you today?</h2>
+              <h2 className="mb-3 text-4xl font-bold tracking-tight text-foreground">
+                How can I help?
+              </h2>
               <p className="max-w-md text-muted-foreground/80 text-lg">
-                I'm your AI assistant capable of using tools like Google Calendar or Todoist to help
-                manage your tasks.
+                I'm ready to assist you with your tasks.
               </p>
             </div>
           )}
@@ -208,16 +222,14 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                 key={message.id}
                 className={cn('flex w-full gap-4', isUser ? 'flex-row-reverse' : 'flex-row')}
               >
-                <Avatar
+                <div
                   className={cn(
-                    'h-9 w-9 shrink-0 ring-1 ring-border/50',
+                    'h-10 w-10 shrink-0 transition-transform hover:scale-105',
                     isUser ? 'hidden' : 'block',
                   )}
                 >
-                  <AvatarFallback className={cn('bg-background text-primary')}>
-                    <Sparkles className="h-4.5 w-4.5" />
-                  </AvatarFallback>
-                </Avatar>
+                  <AgentOrb state="idle" className="h-10 w-10" />
+                </div>
 
                 <div
                   className={cn(
@@ -237,17 +249,27 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                         return (
                           <div
                             key={toolCallId}
-                            className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50"
+                            className="group flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-xs font-medium text-muted-foreground transition-all hover:bg-white/10 hover:border-white/10"
                           >
-                            <Wrench className="h-3.5 w-3.5" />
-                            <span className="font-mono">{toolName}</span>
-                            <div className="ml-auto flex items-center">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-background/50 ring-1 ring-white/10">
+                              <Wrench className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="font-mono text-xs uppercase tracking-wider opacity-70">
+                              {toolName}
+                            </span>
+                            <div className="ml-auto flex items-center gap-2">
                               {state === 'result' && (
-                                <span className="text-emerald-500 dark:text-emerald-400 font-semibold">
-                                  Completed
+                                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                                  Done
                                 </span>
                               )}
-                              {state === 'call' && <Loader2 className="h-3 w-3 animate-spin" />}
+                              {state === 'call' && (
+                                <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Running
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
@@ -259,10 +281,15 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                   {text && (
                     <div
                       className={cn(
-                        'prose prose-sm max-w-full wrap-break-word overflow-hidden rounded-2xl px-5 py-3.5',
+                        'prose prose-sm max-w-full overflow-hidden rounded-2xl px-6 py-4 shadow-sm backdrop-blur-md',
                         isUser
-                          ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10 prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-a:text-primary-foreground prose-a:underline'
-                          : 'bg-muted/50 text-foreground border border-border/40 shadow-sm prose-a:text-primary prose-a:underline hover:prose-a:text-primary/80',
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-black/5'
+                          : 'bg-card/40 border border-white/5 text-foreground shadow-black/5',
+                        // Typography adjustments
+                        'prose-headings:font-bold prose-headings:tracking-tight',
+                        isUser
+                          ? 'prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-a:text-primary-foreground focus-visible:ring-offset-2'
+                          : 'prose-a:text-primary prose-a:no-underline prose-a:border-b prose-a:border-primary/30 hover:prose-a:border-primary prose-strong:text-foreground',
                       )}
                     >
                       <Markdown
@@ -273,65 +300,28 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                               href={href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={cn(
-                                'underline underline-offset-2 transition-colors break-all',
-                                isUser
-                                  ? 'text-primary-foreground/90 hover:text-primary-foreground'
-                                  : 'text-primary hover:text-primary/80',
-                              )}
+                              className="font-medium transition-all"
                             >
                               {children}
                             </a>
                           ),
                           p: ({ children }) => (
-                            <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
+                            <p className="mb-3 last:mb-0 leading-7 opacity-90">{children}</p>
                           ),
                           code: ({ children }) => (
-                            <code className="bg-foreground/5 rounded px-1.5 py-0.5 font-mono text-sm text-foreground/80 break-all">
+                            <code
+                              className={cn(
+                                'rounded px-1.5 py-0.5 font-mono text-xs font-medium',
+                                isUser ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary',
+                              )}
+                            >
                               {children}
                             </code>
                           ),
                           pre: ({ children }) => (
-                            <pre className="p-4 rounded-lg overflow-x-auto text-foreground my-2 max-w-full">
+                            <pre className="p-4 rounded-xl overflow-x-auto bg-black/40 border border-white/5 my-3 text-xs leading-loose text-white/90 shadow-inner">
                               {children}
                             </pre>
-                          ),
-                          strong: ({ children }) => (
-                            <strong className={cn('font-bold', !isUser && 'text-primary/80')}>
-                              {children}
-                            </strong>
-                          ),
-                          h2: ({ children }) => (
-                            <h2 className="text-lg text-foreground font-bold mb-2">{children}</h2>
-                          ),
-                          h3: ({ children }) => (
-                            <h3 className="text-md text-foreground font-bold mb-2">{children}</h3>
-                          ),
-                          table: ({ children }) => (
-                            <div className="my-4 w-full max-w-full overflow-x-auto">
-                              <table className="w-full border-collapse border border-border/50 text-sm">
-                                {children}
-                              </table>
-                            </div>
-                          ),
-                          thead: ({ children }) => (
-                            <thead className="bg-muted/50 text-left">{children}</thead>
-                          ),
-                          tbody: ({ children }) => (
-                            <tbody className="divide-y divide-border/50">{children}</tbody>
-                          ),
-                          tr: ({ children }) => (
-                            <tr className="transition-colors hover:bg-muted/30">{children}</tr>
-                          ),
-                          th: ({ children }) => (
-                            <th className="border-r border-border/50 px-4 py-2 font-semibold text-muted-foreground last:border-r-0">
-                              {children}
-                            </th>
-                          ),
-                          td: ({ children }) => (
-                            <td className="border-r border-border/50 px-4 py-2 last:border-r-0">
-                              {children}
-                            </td>
                           ),
                         }}
                       >
@@ -344,86 +334,100 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
             );
           })}
 
-          {/* Loading/Typing Indicator */}
-          {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
-            <div className="flex gap-4">
-              <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border/50">
-                <AvatarFallback className="bg-background text-primary">
-                  <Sparkles className="h-4.5 w-4.5 animate-pulse" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex items-center gap-1.5 rounded-2xl border border-border/40 bg-muted/50 px-5 py-4 shadow-sm">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.3s]" />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40 [animation-delay:-0.15s]" />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
+          {/* Reasoning / Loading State */}
+          {/* Reasoning / Loading State */}
+          {isLoading &&
+            messages.length > 0 &&
+            (messages[messages.length - 1]?.role === 'user' ||
+              (messages[messages.length - 1]?.role === 'assistant' &&
+                !getMessageText(messages[messages.length - 1]))) && (
+              <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="h-10 w-10 shrink-0">
+                  <AgentOrb state="thinking" className="h-10 w-10" />
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-muted/50 px-5 py-4 backdrop-blur-sm">
+                  <div className="relative flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-primary/50" />
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground animate-pulse">
+                    Thinking...
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {(error || uiError) && (
-            <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in slide-in-from-top-2">
-              <span className="font-semibold">Error:</span> {uiError || error?.message}
-            </div>
-          )}
+            )}
 
           {/* Anchor for auto-scroll */}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </ScrollArea>
 
       {/* Footer Input Area */}
-      <div className="p-4 bg-background/80 backdrop-blur-md">
+      <div className="relative z-20 w-full p-4 md:p-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <form
             onSubmit={handleSubmit}
-            className="relative flex items-center gap-2 rounded-2xl border border-input bg-background/50 p-2 shadow-sm focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all"
+            className={cn(
+              'relative flex items-end gap-2 rounded-[1.5rem] border border-white/10 bg-background/60 p-2 shadow-2xl backdrop-blur-xl transition-all duration-300',
+              'focus-within:ring-1 focus-within:ring-primary/30 focus-within:border-primary/30 focus-within:bg-background/80',
+            )}
           >
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl"
+              className="h-10 w-10 mb-1 rounded-xl text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary"
               onClick={handleClear}
               title="Clear History"
             >
-              <Trash className="h-4 w-4" />
+              <Trash className="h-5 w-5" />
             </Button>
 
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder={isVoskListening ? 'Listening...' : 'Message AI Assistant...'}
+              placeholder={isVoskListening ? 'Listening...' : 'Type a message...'}
               className={cn(
-                'min-h-[80px] max-h-[400px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base',
+                'min-h-[50px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-3.5 shadow-none focus-visible:ring-0 text-base leading-relaxed',
                 isVoskListening && 'placeholder:text-primary animate-pulse',
               )}
-              rows={3}
+              rows={1}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = `${target.scrollHeight}px`;
+              }}
               disabled={isLoading}
             />
 
-            <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1 mb-1">
               <Button
                 type="button"
-                variant={isVoskListening ? 'default' : 'ghost'}
+                variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-10 w-10 transition-all rounded-xl',
+                  'h-10 w-10 rounded-xl transition-all duration-300',
                   isVoskListening
-                    ? 'bg-red-500 hover:bg-red-600 text-foreground animate-pulse'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 ring-1 ring-red-500/20'
+                    : 'text-muted-foreground hover:bg-primary/10 hover:text-primary',
                 )}
                 onClick={toggleVoiceInput}
-                title={isVoskListening ? 'Stop Listening' : 'Start Voice Recognition'}
                 disabled={isLoading || voskServerStatus === false}
               >
                 {voskServerStatus === null ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isVoskListening ? (
-                  <MicOff className="h-4 w-4 text-foreground" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Mic className="h-4 w-4 text-foreground" />
+                  <div className="relative">
+                    {isVoskListening && (
+                      <span className="absolute inset-0 -m-1 rounded-full bg-red-500/20 animate-ping" />
+                    )}
+                    {isVoskListening ? (
+                      <MicOff className="h-5 w-5 relative" />
+                    ) : (
+                      <Mic className="h-5 w-5" />
+                    )}
+                  </div>
                 )}
               </Button>
 
@@ -431,24 +435,21 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                 type="submit"
                 size="icon"
                 className={cn(
-                  'h-10 w-10 shrink-0 transition-all rounded-xl shadow-sm',
-                  !input.trim() || isLoading
-                    ? 'opacity-50'
-                    : 'opacity-100 hover:scale-105 active:scale-95',
+                  'h-10 w-10 shrink-0 rounded-xl transition-all duration-300 shadow-md',
+                  input.trim() && !isLoading
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-primary/20'
+                    : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed',
                 )}
                 disabled={isLoading || !input.trim()}
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-5 w-5" />
                 )}
               </Button>
             </div>
           </form>
-          <div className="mt-3 text-center text-xs text-muted-foreground/70">
-            AI Assistant can make mistakes. Please double-check important information.
-          </div>
         </div>
       </div>
     </div>
