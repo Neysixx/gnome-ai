@@ -1,5 +1,6 @@
 'use client';
 
+import { AgentOrb } from '@/components/agent-orb';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,7 +23,6 @@ import { Loader2, Mic, MicOff, Send, Trash, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AgentOrb } from '@/components/agent-orb';
 
 // Helper to extract text from a message
 function getMessageText(message: UIMessage): string {
@@ -309,10 +309,12 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                             <p className="mb-3 last:mb-0 leading-7 opacity-90">{children}</p>
                           ),
                           code: ({ children }) => (
-                            <code className={cn(
-                              "rounded px-1.5 py-0.5 font-mono text-xs font-medium",
-                              isUser ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
-                            )}>
+                            <code
+                              className={cn(
+                                'rounded px-1.5 py-0.5 font-mono text-xs font-medium',
+                                isUser ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary',
+                              )}
+                            >
                               {children}
                             </code>
                           ),
@@ -345,8 +347,8 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-muted/50 px-5 py-4 backdrop-blur-sm">
                   <div className="relative flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-primary/50"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-primary/50" />
                   </div>
                   <span className="text-sm font-medium text-muted-foreground animate-pulse">
                     Thinking...
@@ -366,8 +368,8 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
           <form
             onSubmit={handleSubmit}
             className={cn(
-              "relative flex items-end gap-2 rounded-[1.5rem] border border-white/10 bg-background/60 p-2 shadow-2xl backdrop-blur-xl transition-all duration-300",
-              "focus-within:ring-1 focus-within:ring-primary/30 focus-within:border-primary/30 focus-within:bg-background/80"
+              'relative flex items-end gap-2 rounded-[1.5rem] border border-white/10 bg-background/60 p-2 shadow-2xl backdrop-blur-xl transition-all duration-300',
+              'focus-within:ring-1 focus-within:ring-primary/30 focus-within:border-primary/30 focus-within:bg-background/80',
             )}
           >
             <Button
@@ -417,8 +419,14 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <div className="relative">
-                    {isVoskListening && <span className="absolute inset-0 -m-1 rounded-full bg-red-500/20 animate-ping" />}
-                    {isVoskListening ? <MicOff className="h-5 w-5 relative" /> : <Mic className="h-5 w-5" />}
+                    {isVoskListening && (
+                      <span className="absolute inset-0 -m-1 rounded-full bg-red-500/20 animate-ping" />
+                    )}
+                    {isVoskListening ? (
+                      <MicOff className="h-5 w-5 relative" />
+                    ) : (
+                      <Mic className="h-5 w-5" />
+                    )}
                   </div>
                 )}
               </Button>
@@ -430,7 +438,7 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                   'h-10 w-10 shrink-0 rounded-xl transition-all duration-300 shadow-md',
                   input.trim() && !isLoading
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-primary/20'
-                    : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                    : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed',
                 )}
                 disabled={isLoading || !input.trim()}
               >
