@@ -1,6 +1,6 @@
 services:
   app:
-    image: neysixx/gnome-ai-assistant-nextjs:v1.0.5 # x-release-please-version
+    image: neysixx/gnome-ai-assistant-nextjs:v1.0.6 # x-release-please-version
     restart: unless-stopped
     ports:
       - "9999:9999"
