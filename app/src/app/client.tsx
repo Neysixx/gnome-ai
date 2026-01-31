@@ -220,7 +220,10 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                 </Avatar>
 
                 <div
-                  className={cn('relative max-w-[85%] space-y-2', isUser ? 'ml-auto' : 'mr-auto')}
+                  className={cn(
+                    'relative max-w-[85%] min-w-0 space-y-2',
+                    isUser ? 'ml-auto' : 'mr-auto',
+                  )}
                 >
                   {/* Tool Calls */}
                   {toolParts.length > 0 && (
@@ -256,25 +259,40 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
                   {text && (
                     <div
                       className={cn(
-                        'prose prose-sm max-w-none wrap-break-word rounded-2xl px-5 py-3.5',
+                        'prose prose-sm max-w-full wrap-break-word overflow-hidden rounded-2xl px-5 py-3.5',
                         isUser
-                          ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10 prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground'
-                          : 'bg-muted/50 text-foreground border border-border/40 shadow-sm',
+                          ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10 prose-headings:text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-a:text-primary-foreground prose-a:underline'
+                          : 'bg-muted/50 text-foreground border border-border/40 shadow-sm prose-a:text-primary prose-a:underline hover:prose-a:text-primary/80',
                       )}
                     >
                       <Markdown
                         remarkPlugins={[remarkGfm]}
                         components={{
+                          a: ({ href, children }) => (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(
+                                'underline underline-offset-2 transition-colors break-all',
+                                isUser
+                                  ? 'text-primary-foreground/90 hover:text-primary-foreground'
+                                  : 'text-primary hover:text-primary/80',
+                              )}
+                            >
+                              {children}
+                            </a>
+                          ),
                           p: ({ children }) => (
                             <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
                           ),
                           code: ({ children }) => (
-                            <code className="bg-foreground/5 rounded px-1.5 py-0.5 font-mono text-sm text-foreground/80">
+                            <code className="bg-foreground/5 rounded px-1.5 py-0.5 font-mono text-sm text-foreground/80 break-all">
                               {children}
                             </code>
                           ),
                           pre: ({ children }) => (
-                            <pre className=" p-4 rounded-lg overflow-x-auto text-foreground my-2">
+                            <pre className="p-4 rounded-lg overflow-x-auto text-foreground my-2 max-w-full">
                               {children}
                             </pre>
                           ),
@@ -378,7 +396,7 @@ export default function Client({ initialConfig }: { initialConfig: AppConfig }) 
               onKeyDown={onKeyDown}
               placeholder={isVoskListening ? 'Listening...' : 'Message AI Assistant...'}
               className={cn(
-                'min-h-[80px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base',
+                'min-h-[80px] max-h-[400px] flex-1 resize-y border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0 text-base',
                 isVoskListening && 'placeholder:text-primary animate-pulse',
               )}
               rows={3}
