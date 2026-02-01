@@ -93,14 +93,24 @@ export class DockerService {
           'always',
         ]);
 
-        proc.wait_check_async(null, (_proc, res) => {
+        proc.communicate_utf8_async(null, null, (proc, res) => {
           try {
-            _proc?.wait_check_finish(res);
+            const [ok, stdout, stderr] = proc?.communicate_utf8_finish(res) || [false, '', ''];
+
+            if (!proc?.get_successful()) {
+              console.error(`[AI] Docker compose failed: ${stderr}`);
+              // Try to maintain a user-friendly message but include key details if valid
+              const errorMsg = stderr ? stderr.trim().split('\n').pop() : 'Unknown error';
+              Main.notify('AI Assistant', `Error starting: ${errorMsg}`);
+              resolve(false);
+              return;
+            }
+
             console.log('[AI] Docker compose command completed, verifying...');
             this._waitForContainers(resolve);
           } catch (e) {
-            console.error(`[AI] Failed to start containers: ${e}`);
-            Main.notify('AI Assistant', 'Error starting services');
+            console.error(`[AI] Failed to communicate with docker process: ${e}`);
+            Main.notify('AI Assistant', 'Error communicating with Docker');
             resolve(false);
           }
         });
