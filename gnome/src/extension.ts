@@ -86,6 +86,17 @@ export const Indicator = GObject.registerClass(
     }
 
     _toggleClient() {
+      const status = this._setupService?.status;
+
+      // If in error state, allow retry
+      if (status === 'error') {
+        this._setupService?.reset();
+        this._initializeServices();
+        Main.notify('AI Assistant', 'Retrying setup...');
+        return;
+      }
+
+      // If not ready yet, show waiting message
       if (!this._setupService?.isReady) {
         Main.notify('AI Assistant', 'Services are starting, please wait...');
         return;

@@ -137,6 +137,10 @@ export class SetupService {
     return true;
   }
 
+  public reset(): void {
+    this._status = 'idle';
+  }
+
   public shutdown(): void {
     this._dockerService.stopContainers();
     this._status = 'idle';
