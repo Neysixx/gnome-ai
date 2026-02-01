@@ -3,5 +3,7 @@
   "description": "AI Assistant",
   "uuid": "gnome-ai-assistant@neysixx",
   "shell-version": ["46", "47"],
-  "version-name": "1.0.0"
+  "version-name": "1.0.0",
+  "url": "https://github.com/Neysixx/gnome-ai",
+  "settings-schema": "org.gnome.shell.extensions.gnome-ai-assistant"
 }

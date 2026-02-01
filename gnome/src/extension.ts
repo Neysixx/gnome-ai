@@ -5,11 +5,14 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { SetupService, type SetupStatus } from './services/index.js';
 
 export const Indicator = GObject.registerClass(
   class Indicator extends St.Bin {
     private _proc: Gio.Subprocess | null = null;
     private _extensionPath = '';
+    private _setupService: SetupService | null = null;
+    private _extension: Extension | null = null;
 
     _init() {
       super._init({
@@ -20,29 +23,85 @@ export const Indicator = GObject.registerClass(
       });
     }
 
-    setExtensionPath(extensionPath: string) {
-      if (!extensionPath) {
+    async setExtension(extension: Extension) {
+      if (!extension.path) {
         console.error('[AI ERROR] Extension path is required');
         throw new Error('Extension path is required');
       }
 
-      this._extensionPath = extensionPath;
+      this._extension = extension;
+      this._extensionPath = extension.path;
+      this._setupService = SetupService.getInstance();
       console.log(`[AI] Indicator path set to: ${this._extensionPath}`);
 
       const icon = new St.Icon({
-        icon_name: 'user-available-symbolic',
+        icon_name: 'user-busy-symbolic',
         style_class: 'system-status-icon',
       });
 
       this.set_child(icon);
 
-      // Handle click events
-      this.connect('button-press-event', (_actor: unknown, _event: Clutter.Event) => {
-        this._toggleClient();
+      this.connect('button-press-event', (_actor: unknown, event: Clutter.Event) => {
+        const button = event.get_button();
+        console.log(`[AI] Button pressed: ${button}`);
+        // Left click: toggle client
+        if (button === 1) {
+          this._toggleClient();
+          return Clutter.EVENT_STOP;
+        }
+        // Right click: open preferences
+        if (button === 3) {
+          console.log('[AI] Opening preferences...');
+          this._openPreferences();
+          return Clutter.EVENT_STOP;
+        }
         return Clutter.EVENT_STOP;
       });
+
+      await this._initializeServices();
     }
+
+    async _initializeServices() {
+      console.log('[AI] Initializing services...');
+
+      if (!this._setupService) {
+        console.error('[AI ERROR] SetupService not initialized');
+        return;
+      }
+
+      const result = await this._setupService.initialize((status: SetupStatus) => {
+        this._updateIcon(status === 'ready');
+      });
+
+      if (!result.success) {
+        console.error(`[AI] Setup failed: ${result.message}`);
+      }
+    }
+
+    _updateIcon(ready: boolean) {
+      const icon = this.get_child() as St.Icon;
+      if (icon) {
+        icon.icon_name = ready ? 'user-available-symbolic' : 'user-busy-symbolic';
+      }
+    }
+
     _toggleClient() {
+      const status = this._setupService?.status;
+
+      // If in error state, allow retry
+      if (status === 'error') {
+        this._setupService?.reset();
+        this._initializeServices();
+        Main.notify('AI Assistant', 'Retrying setup...');
+        return;
+      }
+
+      // If not ready yet, show waiting message
+      if (!this._setupService?.isReady) {
+        Main.notify('AI Assistant', 'Services are starting, please wait...');
+        return;
+      }
+
       if (this._proc) {
         this._closeClient();
       } else {
@@ -68,10 +127,8 @@ export const Indicator = GObject.registerClass(
       try {
         let env = GLib.get_environ();
 
-        // The magic variable for the Sandbox
         env = GLib.environ_setenv(env, 'WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS', '1', true);
 
-        // Make sure the client knows which screen to display on
         const display = GLib.getenv('DISPLAY') || ':0';
         env = GLib.environ_setenv(env, 'DISPLAY', display, true);
 
@@ -85,20 +142,17 @@ export const Indicator = GObject.registerClass(
         });
         launcher.set_environ(env);
 
-        console.log(`[AI] Launching via /usr/bin/gjs : ${clientPath}`);
+        console.log(`[AI] Launching client: ${clientPath}`);
 
-        // Using absolute path for gjs
         const proc = launcher.spawnv(['/usr/bin/gjs', '-m', clientPath]);
         this._proc = proc;
 
-        // Read standard output (console.log from client)
         const stdoutPipe = proc.get_stdout_pipe();
         if (stdoutPipe) {
           const stdoutStream = new Gio.DataInputStream({ base_stream: stdoutPipe });
           this._readStream(stdoutStream, '[CLIENT LOG]');
         }
 
-        // Read errors
         const stderrPipe = proc.get_stderr_pipe();
         if (stderrPipe) {
           const stderrStream = new Gio.DataInputStream({ base_stream: stderrPipe });
@@ -113,9 +167,7 @@ export const Indicator = GObject.registerClass(
           } catch (e: unknown) {
             const error = e as { code?: number; message?: string };
             if (error.code !== Gio.IOErrorEnum.CANCELLED) {
-              console.log(
-                `[AI] Process finished (Code: ${error.code}, Message: ${error.message}).`,
-              );
+              console.log(`[AI] Client exited (Code: ${error.code}, Message: ${error.message}).`);
             }
           }
           this._proc = null;
@@ -128,65 +180,41 @@ export const Indicator = GObject.registerClass(
       }
     }
 
-    // Small utility function to read streams without blocking
     _readStream(stream: Gio.DataInputStream, prefix: string) {
       stream.read_line_async(0, null, (obj, res) => {
         try {
           const [line] = obj?.read_line_finish_utf8(res) || [null];
           if (line !== null) {
             console.log(`${prefix} ${line}`);
-            // Continue reading the next line
             this._readStream(stream, prefix);
           }
         } catch (e: unknown) {
-          // End of stream or error
           const error = e as { message?: string };
-          console.log(`${prefix} Stream error or end: ${error.message || 'unknown'}`);
+          console.log(`${prefix} Stream ended: ${error.message || 'unknown'}`);
         }
       });
-    }
-
-    _launchClient(clientPath: string) {
-      try {
-        // Launch the client script as a subprocess
-        const launcher = new Gio.SubprocessLauncher({
-          flags: Gio.SubprocessFlags.NONE,
-        });
-
-        console.log(`[AI Assistant] Launching client: gjs -m ${clientPath}`);
-        const proc = launcher.spawnv(['gjs', '-m', clientPath]);
-        this._proc = proc;
-
-        // Watch for process exit - use arrow function to capture 'this'
-        proc.wait_check_async(null, (_proc, res) => {
-          try {
-            if (_proc) {
-              _proc.wait_check_finish(res);
-            }
-          } catch (e: unknown) {
-            // Process ended (maybe closed by user or crashed)
-            const error = e as { code?: number };
-            if (error.code !== Gio.IOErrorEnum.CANCELLED) {
-              console.log(`[AI Assistant] Client process exited (Code: ${error.code})`);
-            }
-          }
-
-          // Clear the process reference
-          this._proc = null;
-        });
-      } catch (error: unknown) {
-        const err = error as { message?: string; stack?: string };
-        console.error(`[AI Assistant] Failed to launch client: ${err.message || 'unknown error'}`);
-        console.error(`[AI Assistant] Path attempted: ${clientPath}`);
-        console.error(`[AI ERROR] Stack trace: ${err.stack || 'no stack trace'}`);
-        this._proc = null;
-      }
     }
 
     _closeClient() {
       if (this._proc) {
         this._proc.force_exit();
         this._proc = null;
+      }
+    }
+
+    _openPreferences() {
+      if (!this._extension) {
+        console.error('[AI ERROR] Extension not set. Cannot open preferences.');
+        Main.notify('AI Assistant', 'Extension not initialized');
+        return;
+      }
+
+      try {
+        this._extension.openPreferences();
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        console.error(`[AI] Failed to open preferences: ${error.message}`);
+        Main.notify('AI Assistant', 'Failed to open preferences');
       }
     }
 
@@ -200,23 +228,22 @@ export const Indicator = GObject.registerClass(
 export default class AiAssistant extends Extension {
   private _indicator: InstanceType<typeof Indicator> | null = null;
 
-  enable() {
-    // @ts-ignore - GObject.registerClass creates a constructor that may not match TypeScript types
+  async enable() {
+    // @ts-ignore
     this._indicator = new Indicator();
-    // Définir le path après l'instanciation
-    this._indicator.setExtensionPath(this.path);
-    // Add directly to the right side of the panel
-    // @ts-ignore - _rightBox is a private property but it's the standard way to add custom widgets
-    Main.panel._rightBox.add_child(this._indicator);
+    await this._indicator.setExtension(this);
+    // @ts-ignore
+    Main.panel._rightBox.insert_child_at_index(this._indicator, 0);
   }
 
-  disable() {
+  async disable() {
     if (this._indicator) {
-      // Remove from panel before destroying
-      // @ts-ignore - _rightBox is a private property
+      // @ts-ignore
       Main.panel._rightBox.remove_child(this._indicator);
       this._indicator.destroy();
       this._indicator = null;
     }
+
+    SetupService.getInstance().shutdown();
   }
 }

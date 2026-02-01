@@ -1,14 +1,76 @@
 #!/usr/bin/env gjs -m
 
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk?version=4.0';
 import WebKit from 'gi://WebKit?version=6.0';
+
+import { APP_HOST, APP_ID, APP_URL } from './constants.js';
 
 // Debug visible in journalctl
 print('[AI CLIENT] Starting client script...');
 
-const APP_URL = 'http://localhost:9999';
-const APP_ID = 'com.neysixx.gnome_ai_assistant.client';
+/**
+ * Setup a WebView with common settings and handlers
+ * @param {WebKit.WebView} webView
+ * @param {string} logPrefix
+ */
+function setupWebView(webView, logPrefix = '[AI CLIENT]') {
+  // Enable microphone access for speech recognition
+  const settings = webView.get_settings();
+  settings.set_enable_media_stream(true);
+  settings.set_enable_mediasource(true);
+
+  // Handle permission requests
+  webView.connect('permission-request', (_webView, request) => {
+    print(`${logPrefix} Permission request: ${request.constructor.$gtype.name}`);
+
+    if (request instanceof WebKit.UserMediaPermissionRequest) {
+      print(`${logPrefix} Allowing user media (microphone/camera)`);
+      request.allow();
+      return true;
+    }
+
+    return false;
+  });
+
+  // Handle navigation - open external links in default browser (only for user-initiated clicks)
+  webView.connect('decide-policy', (_webView, decision, decisionType) => {
+    if (decisionType === WebKit.PolicyDecisionType.NAVIGATION_ACTION) {
+      const navAction = decision.get_navigation_action();
+      const navType = navAction.get_navigation_type();
+
+      // Only intercept user-initiated link clicks, not programmatic navigation
+      if (navType === WebKit.NavigationType.LINK_CLICKED) {
+        const request = navAction.get_request();
+        const uri = request.get_uri();
+
+        if (uri) {
+          try {
+            const gUri = GLib.Uri.parse(uri, GLib.UriFlags.NONE);
+            const host = gUri.get_host();
+            const port = gUri.get_port();
+            const fullHost = port > 0 ? `${host}:${port}` : host;
+
+            // External link: open in default browser
+            if (fullHost !== APP_HOST) {
+              print(`${logPrefix} Opening external link in browser: ${uri}`);
+              Gio.AppInfo.launch_default_for_uri(uri, null);
+              decision.ignore();
+              return true;
+            }
+          } catch (e) {
+            print(`${logPrefix} URI parse error: ${e.message}`);
+          }
+        }
+      }
+    }
+    decision.use();
+    return true;
+  });
+
+  webView.load_uri(APP_URL);
+}
 
 // Let Gtk.Application handle the init
 const app = new Gtk.Application({
@@ -52,50 +114,14 @@ app.connect('activate', () => {
       network_session: networkSession,
     });
 
-    // Enable microphone access for speech recognition
-    const settings = webView.get_settings();
-    settings.set_enable_media_stream(true);
-    settings.set_enable_mediasource(true);
-
-    // Handle permission requests
-    webView.connect('permission-request', (webView, request) => {
-      print(`[AI CLIENT] Permission request: ${request.constructor.$gtype.name}`);
-
-      // Auto-allow microphone/camera permissions
-      if (request instanceof WebKit.UserMediaPermissionRequest) {
-        print('[AI CLIENT] Allowing user media (microphone/camera)');
-        request.allow();
-        return true;
-      }
-
-      // Deny other permission types by default
-      return false;
-    });
-
-    webView.load_uri(APP_URL);
+    setupWebView(webView, '[AI CLIENT]');
     window.set_child(webView);
   } catch (e) {
     print(`[AI CLIENT] WebKit error: ${e.message}`);
     // Fallback to non-persistent if something fails
     try {
       const webView = new WebKit.WebView();
-
-      // Enable microphone access for fallback too
-      const settings = webView.get_settings();
-      settings.set_enable_media_stream(true);
-      settings.set_enable_mediasource(true);
-
-      // Handle permission requests
-      webView.connect('permission-request', (webView, request) => {
-        if (request instanceof WebKit.UserMediaPermissionRequest) {
-          print('[AI CLIENT FALLBACK] Allowing user media');
-          request.allow();
-          return true;
-        }
-        return false;
-      });
-
-      webView.load_uri(APP_URL);
+      setupWebView(webView, '[AI CLIENT FALLBACK]');
       window.set_child(webView);
     } catch (e2) {
       print(`[AI CLIENT] Fatal WebKit error: ${e2.message}`);
