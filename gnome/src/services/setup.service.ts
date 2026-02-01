@@ -68,7 +68,10 @@ export class SetupService {
       }
 
       // Step 4: Always ensure docker-compose.yml exists
-      const composeDownloaded = await this._githubService.downloadToAppDir('docker-compose.yml', true);
+      const composeDownloaded = await this._githubService.downloadToAppDir(
+        'docker-compose.yml',
+        true,
+      );
       if (!composeDownloaded) {
         Main.notify('AI Assistant', 'Failed to download docker-compose.yml');
         updateStatus('error');
